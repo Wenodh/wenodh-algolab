@@ -38,3 +38,23 @@
 @keyframes bar-shimmer{0%,45%{transform:translateX(-120%)}75%,100%{transform:translateX(120%)}}
 @media(max-width:760px){.complexity-scene{padding:17px 10px 13px;margin-bottom:12px}.scene-heading{padding:0 6px}.scene-heading h3{font-size:14px}.staircase-svg{width:100%;min-width:0}.scene-slider{padding:7px 8px 0;gap:8px}.scene-slider label{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.stair-block,.scene-cube,.input-callout,.complexity-scene:before,.scene-live i,.array-bar,.bar-shine{animation:none!important;transition:none!important}.stair-block{opacity:1;transform:none}.array-bar{transform:none}}
+
+
+/* Production polish for the interactive complexity scene */
+.cube-overflow{fill:#24262b;font:700 10px 'DM Mono';paint-order:stroke;stroke:#f4f0e7;stroke-width:2px;stroke-linejoin:round}
+.step-pill text{font-size:15px;font-variant-numeric:tabular-nums}
+.scene-slider input{cursor:pointer;accent-color:#e76a50}
+.scene-slider input:focus-visible,.legend-chip:focus-visible,.small-toggle:focus-visible{outline:2px solid #f18a70;outline-offset:3px}
+.legend-chip{transition:opacity .18s ease,border-color .18s ease,background .18s ease}
+.small-toggle{transition:background .18s ease,border-color .18s ease,color .18s ease}
+.complexity-scene{border-color:rgba(220,225,235,.16);box-shadow:inset 0 1px rgba(255,255,255,.025),0 18px 45px rgba(0,0,0,.18)}
+.scene-canvas{overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:#42434b transparent}
+.staircase-svg{min-width:0}
+@media(max-width:480px){
+  .scene-canvas{margin:0 -5px;padding:0 5px}
+  .staircase-svg{min-width:650px}
+  .scene-caption{text-align:left;line-height:1.5;padding:0 7px}
+}
+@media(prefers-reduced-motion:reduce){
+  .legend-chip,.small-toggle{transition:none!important}
+}
