@@ -13,7 +13,7 @@ const staircases: { id: Complexity; label: string; x: number; y: number; width: 
   { id: 'O(n²)', label: 'Quadratic', x: 466, y: 150, width: 145, height: 74, count: n => n * n },
 ]
 
-function ComplexityStaircase({ n }: { n: number }) {
+function ComplexityStaircase({ n, onChange }: { n: number; onChange: (value: number) => void }) {
   return <section className="complexity-scene" aria-label="Animated isometric comparison of algorithm step counts">
     <div className="scene-heading"><div><span className="eyebrow">THE BIG-O LANDSCAPE</span><h3>Same input. Different amount of work.</h3></div><span className="scene-live"><i/> LIVE MODEL</span></div>
     <div className="scene-canvas">
@@ -66,7 +66,7 @@ function ComplexityStaircase({ n }: { n: number }) {
         </g>
       </svg>
     </div>
-    <div className="scene-slider"><label htmlFor="scene-input">Change input size <strong>n = {n}</strong></label><input id="scene-input" type="range" min="2" max="12" value={n} onChange={e => window.dispatchEvent(new CustomEvent('algolab-scene-input', { detail: Number(e.target.value) }))} /></div>
+    <div className="scene-slider"><label htmlFor="scene-input">Change input size <strong>n = {n}</strong></label><input id="scene-input" type="range" min="2" max="12" value={n} onChange={e => onChange(Number(e.target.value))} /></div>
     <p className="scene-caption">Illustrative step counts. The staircase shows how quickly work can grow as the input gets larger.</p>
   </section>
 }
@@ -75,11 +75,6 @@ export default function BigOVisualizer() {
   const [n, setN] = useState(2)
   const [selected, setSelected] = useState<Complexity[]>(['O(1)', 'O(log n)', 'O(n)', 'O(n log n)', 'O(n²)'])
   const [normalised, setNormalised] = useState(false)
-  useMemo(() => {
-    const handler = (event: Event) => setN((event as CustomEvent<number>).detail)
-    window.addEventListener('algolab-scene-input', handler)
-    return () => window.removeEventListener('algolab-scene-input', handler)
-  }, [])
   const plot = useMemo(() => {
     const maxRaw = Math.max(...complexities.filter(c => selected.includes(c.id)).map(c => operationCount(c.id, MAX_N)), 1)
     const maxY = normalised ? 1 : maxRaw
@@ -89,7 +84,7 @@ export default function BigOVisualizer() {
   }, [selected, normalised])
   const toggle = (id: Complexity) => setSelected(current => current.includes(id) ? current.filter(x => x !== id) : [...current, id])
   return <>
-    <ComplexityStaircase n={n}/>
+    <ComplexityStaircase n={n} onChange={setN}/>
     <section className="panel graph-panel">
       <div className="panel-heading"><div><span className="eyebrow">GROWTH EXPLORER</span><h2>How does work scale?</h2><p>Toggle curves and change the input size to compare growth.</p></div><button className={normalised ? 'small-toggle active' : 'small-toggle'} onClick={() => setNormalised(v => !v)}>Normalise curves</button></div>
       <div className="chart-wrap">
