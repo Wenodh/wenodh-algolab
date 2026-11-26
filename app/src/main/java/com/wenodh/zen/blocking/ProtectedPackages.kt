@@ -15,16 +15,17 @@ object ProtectedPackages {
         add("com.google.android.emergency")
 
         val packageManager = context.packageManager
-        runCatching {
-            val telecom = context.getSystemService(TelecomManager::class.java)
-            telecom?.defaultDialerPackage?.let(::add)
-        }
-        resolvePackage(packageManager, Intent(Intent.ACTION_DIAL))?.let(::add)
-        resolvePackage(packageManager, Intent("android.intent.action.EMERGENCY_DIAL"))?.let(::add)
+        val defaultDialer = runCatching {
+            context.getSystemService(TelecomManager::class.java)?.defaultDialerPackage
+        }.getOrNull()
+        if (!defaultDialer.isNullOrBlank()) add(defaultDialer)
+
+        resolvePackage(packageManager, Intent(Intent.ACTION_DIAL))?.let { add(it) }
+        resolvePackage(packageManager, Intent("android.intent.action.EMERGENCY_DIAL"))?.let { add(it) }
         resolvePackage(
             packageManager,
             Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-        )?.let(::add)
+        )?.let { add(it) }
     }
 
     private fun resolvePackage(packageManager: PackageManager, intent: Intent): String? =
