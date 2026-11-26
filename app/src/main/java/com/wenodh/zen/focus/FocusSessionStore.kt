@@ -22,15 +22,17 @@ class FocusSessionStore(context: Context) {
         val endsAt = startedAt + durationMinutes * 60_000L
         val id = UUID.randomUUID().toString()
         history.insertSession(id, startedAt, endsAt, durationMinutes)
-        check(
-            prefs.edit()
-                .putString(KEY_SESSION_ID, id)
-                .putLong(KEY_STARTED_AT, startedAt)
-                .putLong(KEY_ENDS_AT, endsAt)
-                .putInt(KEY_DURATION, durationMinutes)
-                .putBoolean(KEY_ACTIVE, true)
-                .commit()
-        ) { "Could not persist focus session." }
+        val saved = prefs.edit()
+            .putString(KEY_SESSION_ID, id)
+            .putLong(KEY_STARTED_AT, startedAt)
+            .putLong(KEY_ENDS_AT, endsAt)
+            .putInt(KEY_DURATION, durationMinutes)
+            .putBoolean(KEY_ACTIVE, true)
+            .commit()
+        if (!saved) {
+            history.finishSession(id, SessionTimeline.STATUS_INTERRUPTED, System.currentTimeMillis())
+            error("Could not persist focus session.")
+        }
     }
 
     @Synchronized
@@ -111,7 +113,7 @@ class FocusSessionStore(context: Context) {
     private fun endsAtMillis(): Long = prefs.getLong(KEY_ENDS_AT, 0L)
 
     private fun clearActiveState() {
-        prefs.edit().clear().commit()
+        check(prefs.edit().clear().commit()) { "Could not clear the active focus session." }
     }
 
     private fun startOfToday(): Long = Calendar.getInstance().run {
