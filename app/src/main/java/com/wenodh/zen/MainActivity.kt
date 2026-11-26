@@ -110,9 +110,11 @@ class MainActivity : ComponentActivity() {
                         dndController = dndController,
                         scheduleStore = scheduleStore,
                         onStart = { minutes ->
-                            sessionStore.start(minutes)
-                            runCatching { FocusSessionService.start(this) }.onFailure {
-                                sessionStore.interrupt()
+                            runCatching {
+                                sessionStore.start(minutes)
+                                FocusSessionService.start(this)
+                            }.onFailure {
+                                runCatching { sessionStore.interrupt() }
                                 Toast.makeText(this, "Could not start the focus timer. Please try again.", Toast.LENGTH_LONG).show()
                             }
                         },
