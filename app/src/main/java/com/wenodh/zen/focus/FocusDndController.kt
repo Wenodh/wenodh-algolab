@@ -17,10 +17,15 @@ class FocusDndController(context: Context) {
     fun applyForSession() {
         if (!isEnabledForFocus() || !hasAccess() || prefs.getBoolean(KEY_APPLIED, false)) return
         val previous = manager.currentInterruptionFilter
-        runCatching {
-            manager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY)
-            prefs.edit().putInt(KEY_PREVIOUS_FILTER, previous).putBoolean(KEY_APPLIED, true).commit()
-        }
+        val saved = prefs.edit()
+            .putInt(KEY_PREVIOUS_FILTER, previous)
+            .putBoolean(KEY_APPLIED, true)
+            .commit()
+        if (!saved) return
+        if (runCatching {
+                manager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY)
+            }.isFailure
+        ) restoreAfterSession()
     }
 
     fun restoreAfterSession() {
