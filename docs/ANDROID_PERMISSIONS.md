@@ -10,8 +10,8 @@ This document is a release gate, not a promise that every restriction can be enf
 | Ongoing focus service | `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_SPECIAL_USE` | Declared; Play eligibility needs review |
 | Launcher app discovery | `<queries>` with MAIN + LAUNCHER intent | Implemented; no broad inventory permission |
 | App-switch detection | User-enabled Accessibility Service | Implemented; foreground package only |
-| DND | Notification Policy Access | Not implemented |
-| Exact schedule alarms | `SCHEDULE_EXACT_ALARM` where justified/available | Not implemented |
+| DND | User-granted Notification Policy Access | Optional integration implemented; restores the previous interruption filter after the session |
+| Daily reminders | WorkManager inexact scheduling | Implemented; reminders can be delayed by Doze/battery optimization and never auto-start a session |
 
 ## App discovery and privacy
 
