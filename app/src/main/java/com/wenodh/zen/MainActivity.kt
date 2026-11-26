@@ -4,6 +4,7 @@ import android.Manifest
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.TimePickerDialog
 import android.content.Intent
+import android.widget.Toast
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -15,10 +16,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -112,9 +111,11 @@ class MainActivity : ComponentActivity() {
                         scheduleStore = scheduleStore,
                         onStart = { minutes ->
                             sessionStore.start(minutes)
-                            FocusSessionService.start(this)
+                            runCatching { FocusSessionService.start(this) }.onFailure {
+                                sessionStore.interrupt()
+                                Toast.makeText(this, "Could not start the focus timer. Please try again.", Toast.LENGTH_LONG).show()
+                            }
                         },
-                        onStop = { FocusSessionService.stop(this) },
                         onChallengePassed = {
                             sessionStore.endWithChallenge()
                             FocusSessionService.stop(this)
@@ -151,7 +152,6 @@ private fun ZenHome(
     dndController: FocusDndController,
     scheduleStore: FocusScheduleStore,
     onStart: (Int) -> Unit,
-    onStop: () -> Unit,
     onChallengePassed: () -> Unit,
     onAmbientChange: (AmbientSoundEngine.Sound?) -> Unit,
     onOpenDndSettings: () -> Unit,
