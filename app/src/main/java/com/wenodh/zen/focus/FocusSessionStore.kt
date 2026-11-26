@@ -101,6 +101,9 @@ class FocusSessionStore(context: Context) {
 
     fun todayCompletedMinutes(): Int = history.todayCompletedMinutes(startOfToday())
     fun todayCompletedCount(): Int = history.todayCompletedCount(startOfToday())
+    fun last7DaysCompletedMinutes(): Int = history.completedMinutesSince(System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000)
+    fun last7DaysCompletedCount(): Int = history.completedCountSince(System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000)
+    fun challengeExitCount(): Int = history.challengeExitCount()
 
     private fun endsAtMillis(): Long = prefs.getLong(KEY_ENDS_AT, 0L)
 
