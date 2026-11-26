@@ -8,14 +8,14 @@
 - [x] Persist session start/end timestamps locally.
 - [x] Add ongoing foreground notification service.
 - [x] Add debug APK GitHub Actions workflow.
-- [ ] Confirm first CI build succeeds and fix any build/runtime issues.
+- [ ] Confirm CI build and unit tests succeed; fix any build/runtime issues.
 
 ## Milestone 1 — Session reliability
 
-- [ ] Add explicit session states: active, completed, interrupted.
-- [ ] Persist session history and profile association in Room.
-- [ ] Recover state after reboot and process death.
-- [ ] Add completion notification and lifecycle tests.
+- [x] Add explicit session states: active, completed, interrupted.
+- [x] Persist session history locally with SQLiteOpenHelper (Room can be introduced when richer relational queries are needed).
+- [x] Restore an active deadline after process death; attempt service recovery after reboot.
+- [x] Add completion notification and pure lifecycle/deadline unit tests.
 - [ ] Test notification permission denial and OEM battery restrictions.
 
 ## Milestone 2 — App restrictions
