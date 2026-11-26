@@ -79,7 +79,7 @@ object AmbientSoundEngine {
         running.set(false)
         writer?.join(250)
         writer = null
-        track?.runCatching { pause(); flush(); release() }
+        track?.let { audio -> runCatching { audio.pause(); audio.flush(); audio.release() } }
         track = null
     }
 }
