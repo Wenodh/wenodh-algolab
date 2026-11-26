@@ -31,11 +31,25 @@ class FocusSessionService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_STOP) {
-            store.interrupt()
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
-            return START_NOT_STICKY
+        when (intent?.action) {
+            ACTION_STOP -> {
+                store.interrupt()
+                AmbientSoundEngine.stop()
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+                return START_NOT_STICKY
+            }
+            ACTION_AMBIENT_STOP -> {
+                AmbientSoundEngine.stop()
+                return START_STICKY
+            }
+            ACTION_AMBIENT_START -> {
+                if (store.isActive()) {
+                    val selected = AmbientSoundStore(this).selected()
+                    if (selected != null) AmbientSoundEngine.start(selected)
+                }
+                return START_STICKY
+            }
         }
 
         // A sticky restart or reboot can arrive after the persisted deadline.
@@ -57,6 +71,7 @@ class FocusSessionService : Service() {
             startForeground(NOTIFICATION_ID, notification)
         }
 
+        AmbientSoundStore(this).selected()?.let(AmbientSoundEngine::start)
         ticker?.cancel()
         ticker = scope.launch {
             while (isActive && store.isActive()) {
@@ -65,6 +80,7 @@ class FocusSessionService : Service() {
                 delay(NOTIFICATION_REFRESH_MS)
             }
             if (store.finishIfExpired()) showCompletionNotification()
+            AmbientSoundEngine.stop()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
@@ -106,6 +122,7 @@ class FocusSessionService : Service() {
 
     override fun onDestroy() {
         ticker?.cancel()
+        AmbientSoundEngine.stop()
         scope.cancel()
         super.onDestroy()
     }
@@ -118,6 +135,8 @@ class FocusSessionService : Service() {
         private const val COMPLETION_NOTIFICATION_ID = 4102
         private const val NOTIFICATION_REFRESH_MS = 15_000L
         const val ACTION_STOP = "com.wenodh.zen.action.STOP_FOCUS"
+        const val ACTION_AMBIENT_START = "com.wenodh.zen.action.AMBIENT_START"
+        const val ACTION_AMBIENT_STOP = "com.wenodh.zen.action.AMBIENT_STOP"
 
         fun start(context: Context) {
             val intent = Intent(context, FocusSessionService::class.java)
@@ -126,6 +145,13 @@ class FocusSessionService : Service() {
 
         fun stop(context: Context) {
             context.startService(Intent(context, FocusSessionService::class.java).setAction(ACTION_STOP))
+        }
+
+        fun setAmbientSound(context: Context, sound: AmbientSoundEngine.Sound?) {
+            AmbientSoundStore(context).select(sound)
+            if (!FocusSessionStore(context).isActive()) return
+            val action = if (sound == null) ACTION_AMBIENT_STOP else ACTION_AMBIENT_START
+            context.startService(Intent(context, FocusSessionService::class.java).setAction(action))
         }
     }
 }
