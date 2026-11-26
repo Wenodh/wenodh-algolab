@@ -21,7 +21,7 @@ class FocusScheduleStore(context: Context) {
         if (enabled) scheduleNext() else WorkManager.getInstance(app).cancelUniqueWork(UNIQUE_WORK)
     }
 
-    fun scheduleNext() {
+    fun scheduleNext(fromWorker: Boolean = false) {
         if (!isEnabled()) return
         val now = Calendar.getInstance()
         val next = now.clone() as Calendar
@@ -33,7 +33,11 @@ class FocusScheduleStore(context: Context) {
         val request = OneTimeWorkRequestBuilder<FocusScheduleWorker>()
             .setInitialDelay(next.timeInMillis - now.timeInMillis, TimeUnit.MILLISECONDS)
             .build()
-        WorkManager.getInstance(app).enqueueUniqueWork(UNIQUE_WORK, ExistingWorkPolicy.REPLACE, request)
+        WorkManager.getInstance(app).enqueueUniqueWork(
+            UNIQUE_WORK,
+            if (fromWorker) ExistingWorkPolicy.APPEND_OR_REPLACE else ExistingWorkPolicy.REPLACE,
+            request
+        )
     }
 
     companion object {
