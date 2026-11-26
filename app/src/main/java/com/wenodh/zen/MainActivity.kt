@@ -61,6 +61,7 @@ import com.wenodh.zen.focus.AmbientSoundStore
 import com.wenodh.zen.focus.FocusAchievements
 import com.wenodh.zen.focus.ExitChallenge
 import com.wenodh.zen.focus.MemoryChallenge
+import com.wenodh.zen.focus.ReflectionChallenge
 import com.wenodh.zen.focus.FocusChallenge
 import com.wenodh.zen.focus.FocusDndController
 import com.wenodh.zen.focus.FocusProfile
