@@ -1,7 +1,6 @@
 package com.wenodh.zen
 
 import android.Manifest
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -38,12 +37,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.lifecycleScope
 import com.wenodh.zen.focus.FocusSessionService
 import com.wenodh.zen.focus.FocusSessionStore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
@@ -83,12 +80,16 @@ private fun ZenHome(
     var selectedMinutes by remember { mutableIntStateOf(25) }
     var remaining by remember { mutableStateOf(store.remainingMillis()) }
     var active by remember { mutableStateOf(store.isActive()) }
+    var todayMinutes by remember { mutableIntStateOf(store.todayCompletedMinutes()) }
+    var todaySessions by remember { mutableIntStateOf(store.todayCompletedCount()) }
 
     LaunchedEffect(Unit) {
         while (isActive) {
             active = store.isActive()
             remaining = store.remainingMillis()
-            delay(500L)
+            todayMinutes = store.todayCompletedMinutes()
+            todaySessions = store.todayCompletedCount()
+            delay(1_000L)
         }
     }
 
@@ -134,12 +135,22 @@ private fun ZenHome(
             }
             Card(
                 modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Today's focus", fontWeight = FontWeight.SemiBold, color = Color(0xFF183B30))
+                    Text("$todayMinutes minutes · $todaySessions completed sessions", color = Color(0xFF52645A), style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+            Card(
+                modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFFE7EFEA)),
                 shape = RoundedCornerShape(18.dp)
             ) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("First things first", fontWeight = FontWeight.SemiBold, color = Color(0xFF183B30))
-                    Text("Your focus timer is saved on this device. App blocking, profiles and schedules are coming in the next milestones.", color = Color(0xFF52645A), style = MaterialTheme.typography.bodyMedium)
+                    Text("Local and private", fontWeight = FontWeight.SemiBold, color = Color(0xFF183B30))
+                    Text("Sessions and history stay on this device. App blocking and challenge-based exit are the next features.", color = Color(0xFF52645A), style = MaterialTheme.typography.bodyMedium)
                 }
             }
             Spacer(Modifier.height(4.dp))
