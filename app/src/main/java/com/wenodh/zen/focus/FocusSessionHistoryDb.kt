@@ -96,6 +96,24 @@ internal class FocusSessionHistoryDb(context: Context) :
             "SELECT COUNT(*) FROM sessions WHERE status = ? AND finished_at >= ?",
             arrayOf(SessionTimeline.STATUS_COMPLETED, dayStartMillis.toString())
         ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
+
+    fun completedMinutesSince(startMillis: Long): Int =
+        readableDatabase.rawQuery(
+            "SELECT COALESCE(SUM(duration_minutes), 0) FROM sessions WHERE status = ? AND finished_at >= ?",
+            arrayOf(SessionTimeline.STATUS_COMPLETED, startMillis.toString())
+        ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
+
+    fun completedCountSince(startMillis: Long): Int =
+        readableDatabase.rawQuery(
+            "SELECT COUNT(*) FROM sessions WHERE status = ? AND finished_at >= ?",
+            arrayOf(SessionTimeline.STATUS_COMPLETED, startMillis.toString())
+        ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
+
+    fun challengeExitCount(): Int =
+        readableDatabase.rawQuery(
+            "SELECT COUNT(*) FROM sessions WHERE status = ?",
+            arrayOf(SessionTimeline.STATUS_CHALLENGE_EXIT)
+        ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
     
     companion object {
         private const val DATABASE_NAME = "wenodh_zen_history.db"
