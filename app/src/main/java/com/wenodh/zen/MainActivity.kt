@@ -66,7 +66,6 @@ import com.wenodh.zen.focus.FocusProfile
 import com.wenodh.zen.focus.FocusProfileStore
 import com.wenodh.zen.focus.FocusSessionService
 import com.wenodh.zen.focus.FocusSessionStore
-import com.wenodh.zen.focus.FocusSessionRecord
 import com.wenodh.zen.schedule.FocusScheduleStore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
