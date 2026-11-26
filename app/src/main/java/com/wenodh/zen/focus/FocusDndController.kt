@@ -17,8 +17,9 @@ class FocusDndController(context: Context) {
     fun applyForSession() {
         if (!isEnabledForFocus() || !hasAccess() || prefs.getBoolean(KEY_APPLIED, false)) return
         val previous = manager.currentInterruptionFilter
-        if (prefs.edit().putInt(KEY_PREVIOUS_FILTER, previous).putBoolean(KEY_APPLIED, true).commit()) {
+        runCatching {
             manager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY)
+            prefs.edit().putInt(KEY_PREVIOUS_FILTER, previous).putBoolean(KEY_APPLIED, true).commit()
         }
     }
 
