@@ -27,6 +27,7 @@ class FocusSessionService : Service() {
     override fun onCreate() {
         super.onCreate()
         store = FocusSessionStore(this)
+        AmbientSoundEngine.initialize(this)
         createNotificationChannel()
     }
 
