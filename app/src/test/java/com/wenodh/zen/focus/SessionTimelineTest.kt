@@ -21,6 +21,12 @@ class SessionTimelineTest {
     }
 
     @Test
+    fun challengeExitIsNotRecordedAsCompleted() {
+        assertEquals("CHALLENGE_EXIT", SessionTimeline.STATUS_CHALLENGE_EXIT)
+        assertTrue(SessionTimeline.STATUS_CHALLENGE_EXIT != SessionTimeline.STATUS_COMPLETED)
+    }
+
+    @Test
     fun completionAndManualExitHaveDifferentTerminalStates() {
         assertEquals(SessionTimeline.STATUS_COMPLETED, SessionTimeline.terminalStatus(false))
         assertEquals(SessionTimeline.STATUS_INTERRUPTED, SessionTimeline.terminalStatus(true))
