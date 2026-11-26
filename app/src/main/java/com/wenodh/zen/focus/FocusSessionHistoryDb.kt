@@ -109,6 +109,35 @@ internal class FocusSessionHistoryDb(context: Context) :
             arrayOf(SessionTimeline.STATUS_COMPLETED, startMillis.toString())
         ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
 
+    fun recentSessions(limit: Int = 10): List<FocusSessionRecord> {
+        val safeLimit = limit.coerceIn(1, 50)
+        return readableDatabase.rawQuery(
+            """
+            SELECT s.id, s.started_at, s.duration_minutes, s.status, s.finished_at,
+                   (SELECT COUNT(*) FROM blocked_attempts b WHERE b.session_id = s.id) AS blocked_attempts
+            FROM sessions s
+            ORDER BY s.started_at DESC
+            LIMIT ?
+            """.trimIndent(),
+            arrayOf(safeLimit.toString())
+        ).use { cursor ->
+            buildList {
+                while (cursor.moveToNext()) {
+                    add(
+                        FocusSessionRecord(
+                            id = cursor.getString(0),
+                            startedAt = cursor.getLong(1),
+                            durationMinutes = cursor.getInt(2),
+                            status = cursor.getString(3),
+                            finishedAt = if (cursor.isNull(4)) null else cursor.getLong(4),
+                            blockedAttempts = cursor.getInt(5)
+                        )
+                    )
+                }
+            }
+        }
+    }
+
     fun allBlockedAttemptCount(): Int =
         readableDatabase.rawQuery(
             "SELECT COUNT(*) FROM blocked_attempts",
