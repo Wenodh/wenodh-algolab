@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
-import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 class FocusScheduleStore(context: Context) {
@@ -23,15 +22,9 @@ class FocusScheduleStore(context: Context) {
 
     fun scheduleNext(fromWorker: Boolean = false) {
         if (!isEnabled()) return
-        val now = Calendar.getInstance()
-        val next = now.clone() as Calendar
-        next.set(Calendar.HOUR_OF_DAY, hour())
-        next.set(Calendar.MINUTE, minute())
-        next.set(Calendar.SECOND, 0)
-        next.set(Calendar.MILLISECOND, 0)
-        if (next.timeInMillis <= now.timeInMillis) next.add(Calendar.DAY_OF_YEAR, 1)
+        val nextTrigger = DailySchedule.nextTriggerMillis(System.currentTimeMillis(), hour(), minute())
         val request = OneTimeWorkRequestBuilder<FocusScheduleWorker>()
-            .setInitialDelay(next.timeInMillis - now.timeInMillis, TimeUnit.MILLISECONDS)
+            .setInitialDelay(nextTrigger - System.currentTimeMillis(), TimeUnit.MILLISECONDS)
             .build()
         WorkManager.getInstance(app).enqueueUniqueWork(
             UNIQUE_WORK,
