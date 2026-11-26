@@ -21,7 +21,7 @@ The app names and package identifiers selected for blocking are stored locally. 
 
 ## Accessibility service
 
-The service observes `TYPE_WINDOW_STATE_CHANGED` and `TYPE_WINDOWS_CHANGED` events and uses only the event package name to determine whether a selected app is foregrounded. It does not retrieve window content, screen text, keystrokes or notifications. Enforcement is attempted only while a persisted focus session is active.
+The service observes `TYPE_WINDOW_STATE_CHANGED` and `TYPE_WINDOWS_CHANGED` events and uses only the event package name to determine whether a selected app is foregrounded. It does not retrieve window content, screen text, keystrokes or notifications. Enforcement is attempted only while a persisted focus session is active. When a selected app is detected, the service invokes Android's Home global action and posts a notification; the restriction explanation opens only after the user taps that notification. This avoids attempting to launch an Activity from the background, which Android restricts.
 
 Before opening Android Accessibility Settings, the app displays a separate in-app disclosure and requires an affirmative tap. The user can disable the service at any time in Android Settings. Wenodh Zen does not prevent disabling or uninstalling itself.
 
