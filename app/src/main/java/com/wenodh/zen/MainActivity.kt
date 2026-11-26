@@ -16,6 +16,7 @@ import android.view.accessibility.AccessibilityManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.NotificationManagerCompat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -73,6 +74,7 @@ import kotlinx.coroutines.isActive
 class MainActivity : ComponentActivity() {
     private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
     private var accessibilityEnabled by mutableStateOf(false)
+    private var notificationsEnabled by mutableStateOf(true)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -134,7 +136,11 @@ class MainActivity : ComponentActivity() {
                             startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
                         },
                         onManageBlockedApps = { showBlockingSettings = true },
-                        serviceEnabled = accessibilityEnabled
+                        serviceEnabled = accessibilityEnabled,
+                        notificationsEnabled = notificationsEnabled,
+                        onOpenNotificationSettings = {
+                            startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
+                        }
                     )
                 }
             }
@@ -150,6 +156,8 @@ class MainActivity : ComponentActivity() {
                 it.resolveInfo.serviceInfo.packageName == packageName &&
                     it.resolveInfo.serviceInfo.name == ZenAccessibilityService::class.java.name
             } == true
+        notificationsEnabled = NotificationManagerCompat.from(this).areNotificationsEnabled() &&
+            (Build.VERSION.SDK_INT < 33 || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)
     }
 }
 
@@ -165,7 +173,9 @@ private fun ZenHome(
     onAmbientChange: (AmbientSoundEngine.Sound?) -> Unit,
     onOpenDndSettings: () -> Unit,
     onManageBlockedApps: () -> Unit,
-    serviceEnabled: Boolean
+    serviceEnabled: Boolean,
+    notificationsEnabled: Boolean,
+    onOpenNotificationSettings: () -> Unit
 ) {
     val context = LocalContext.current
     var selectedProfile by remember { mutableStateOf(profiles.selectedProfile()) }
@@ -299,6 +309,17 @@ private fun ZenHome(
                     }
                 }
             }
+            if (!notificationsEnabled) {
+                item {
+                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF1DB)), shape = RoundedCornerShape(18.dp)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Notifications are disabled", fontWeight = FontWeight.SemiBold)
+                            Text("The focus timer and reminder notifications may not appear. Enable notifications in Android settings.")
+                            OutlinedButton(onClick = onOpenNotificationSettings) { Text("Open notification settings") }
+                        }
+                    }
+                }
+            }
             item {
                 Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFFE7EFEA)), shape = RoundedCornerShape(18.dp)) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -317,13 +338,16 @@ private fun ZenHome(
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Ambient sound", fontWeight = FontWeight.SemiBold)
                         Text("Generated on-device. No tracks or data are downloaded.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            listOf(
-                                "Off" to null,
-                                "White" to AmbientSoundEngine.Sound.WHITE,
-                                "Pink" to AmbientSoundEngine.Sound.PINK,
-                                "Brown" to AmbientSoundEngine.Sound.BROWN
-                            ).forEach { (label, sound) ->
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(
+                                listOf(
+                                    "Off" to null,
+                                    "White" to AmbientSoundEngine.Sound.WHITE,
+                                    "Pink" to AmbientSoundEngine.Sound.PINK,
+                                    "Brown" to AmbientSoundEngine.Sound.BROWN
+                                ),
+                                key = { it.first }
+                            ) { (label, sound) ->
                                 OutlinedButton(onClick = {
                                     selectedAmbient = sound
                                     onAmbientChange(sound)
