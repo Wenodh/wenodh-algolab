@@ -86,7 +86,6 @@ class MainActivity : ComponentActivity() {
         val ambientStore = AmbientSoundStore(this)
         val dndController = FocusDndController(this)
         val scheduleStore = FocusScheduleStore(this)
-        scheduleStore.scheduleNext()
         sessionStore.finishIfExpired()
         if (sessionStore.hasPendingSession()) {
             runCatching { FocusSessionService.start(this) }.onFailure {
