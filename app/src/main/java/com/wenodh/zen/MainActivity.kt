@@ -128,9 +128,13 @@ private fun ZenHome(
 
     LaunchedEffect(Unit) {
         while (isActive) {
-            active = store.isActive()
+            val nowActive = store.isActive()
+            if (nowActive != active) {
+                todayMinutes = store.todayCompletedMinutes()
+                todaySessions = store.todayCompletedCount()
+            }
+            active = nowActive
             remaining = store.remainingMillis()
-            // History queries are intentionally not polled every second.
             delay(1_000L)
         }
     }
