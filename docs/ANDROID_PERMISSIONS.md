@@ -25,7 +25,7 @@ The service observes `TYPE_WINDOW_STATE_CHANGED` events and uses only the event 
 
 Before opening Android Accessibility Settings, the app displays a separate in-app disclosure and requires an affirmative tap. The user can disable the service at any time in Android Settings. Wenodh Zen does not prevent disabling or uninstalling itself.
 
-This is best-effort consumer app restriction, not a secure kiosk or device-owner lock. OEM background behavior, system UI, split-screen, app transitions and Android version differences can affect enforcement. Emergency calls and system settings must remain accessible. If the service is disabled, the app must show that blocking is inactive.
+This is best-effort consumer app restriction, not a secure kiosk or device-owner lock. OEM background behavior, system UI, split-screen, app transitions and Android version differences can affect enforcement. The app, default dialer, emergency dialer, default launcher, Settings and core System UI packages are excluded from the blocked-app picker and enforcement. Emergency calls and system settings must remain accessible. If the service is disabled, the app must show that blocking is inactive.
 
 Google Play requires an Accessibility API declaration and prominent disclosure/consent for non-accessibility-tool uses. The service must be reviewed against current Play policy before distribution. Do not set `isAccessibilityTool=true`; Wenodh Zen is not an accessibility tool.
 
