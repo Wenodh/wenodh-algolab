@@ -1,5 +1,6 @@
 package com.wenodh.zen.focus
 
+import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
@@ -9,9 +10,18 @@ internal class FocusSessionHistoryDb(context: Context) :
     SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     override fun onCreate(db: SQLiteDatabase) {
+        createSessionsTable(db)
+        createBlockedAttemptsTable(db)
+    }
+
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        if (oldVersion < 2) createBlockedAttemptsTable(db)
+    }
+
+    private fun createSessionsTable(db: SQLiteDatabase) {
         db.execSQL(
             """
-            CREATE TABLE sessions (
+            CREATE TABLE IF NOT EXISTS sessions (
                 id TEXT PRIMARY KEY NOT NULL,
                 started_at INTEGER NOT NULL,
                 ends_at INTEGER NOT NULL,
@@ -21,11 +31,23 @@ internal class FocusSessionHistoryDb(context: Context) :
             )
             """.trimIndent()
         )
-        db.execSQL("CREATE INDEX index_sessions_started_at ON sessions(started_at)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_sessions_started_at ON sessions(started_at)")
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        // No released schema yet. Future changes must use explicit migrations.
+    private fun createBlockedAttemptsTable(db: SQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS blocked_attempts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL,
+                package_name TEXT NOT NULL,
+                attempted_at INTEGER NOT NULL,
+                FOREIGN KEY(session_id) REFERENCES sessions(id)
+            )
+            """.trimIndent()
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_blocked_attempts_session ON blocked_attempts(session_id)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_blocked_attempts_time ON blocked_attempts(attempted_at)")
     }
 
     fun insertSession(id: String, startedAt: Long, endsAt: Long, durationMinutes: Int) {
@@ -42,26 +64,41 @@ internal class FocusSessionHistoryDb(context: Context) :
         )
     }
 
-    fun todayCompletedMinutes(dayStartMillis: Long): Int {
+    fun recordBlockedAttempt(sessionId: String, packageName: String, attemptedAt: Long) {
+        val values = ContentValues().apply {
+            put("session_id", sessionId)
+            put("package_name", packageName)
+            put("attempted_at", attemptedAt)
+        }
+        writableDatabase.insertOrThrow("blocked_attempts", null, values)
+    }
+
+    fun blockedAttemptCount(sessionId: String): Int =
+        readableDatabase.rawQuery(
+            "SELECT COUNT(*) FROM blocked_attempts WHERE session_id = ?",
+            arrayOf(sessionId)
+        ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
+
+    fun todayBlockedAttemptCount(dayStartMillis: Long): Int =
+        readableDatabase.rawQuery(
+            "SELECT COUNT(*) FROM blocked_attempts WHERE attempted_at >= ?",
+            arrayOf(dayStartMillis.toString())
+        ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
+
+    fun todayCompletedMinutes(dayStartMillis: Long): Int =
         readableDatabase.rawQuery(
             "SELECT COALESCE(SUM(duration_minutes), 0) FROM sessions WHERE status = ? AND finished_at >= ?",
             arrayOf(SessionTimeline.STATUS_COMPLETED, dayStartMillis.toString())
-        ).use { cursor ->
-            return if (cursor.moveToFirst()) cursor.getInt(0) else 0
-        }
-    }
+        ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
 
-    fun todayCompletedCount(dayStartMillis: Long): Int {
+    fun todayCompletedCount(dayStartMillis: Long): Int =
         readableDatabase.rawQuery(
-            "SELECT COUNT(*) FROM sessions WHERE status = ? AND started_at >= ?",
+            "SELECT COUNT(*) FROM sessions WHERE status = ? AND finished_at >= ?",
             arrayOf(SessionTimeline.STATUS_COMPLETED, dayStartMillis.toString())
-        ).use { cursor ->
-            return if (cursor.moveToFirst()) cursor.getInt(0) else 0
-        }
-    }
-
+        ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
+    
     companion object {
         private const val DATABASE_NAME = "wenodh_zen_history.db"
-        private const val DATABASE_VERSION = 1
+        private const val DATABASE_VERSION = 2
     }
 }
