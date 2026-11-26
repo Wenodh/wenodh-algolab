@@ -212,7 +212,7 @@ private fun ZenHome(
         completedSessions = store.allTimeCompletedCount(),
         completedMinutes = store.allTimeCompletedMinutes(),
         challengeExits = store.challengeExitCount(),
-        blockedAttempts = store.todayBlockedAttemptCount()
+        blockedAttempts = store.allBlockedAttemptCount()
     )
 
     Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFF5F7F5)) {
@@ -432,7 +432,9 @@ private fun ZenHome(
                 }
             },
             confirmButton = {
-                Button(onClick = {
+                Button(
+                    enabled = challenge !is MemoryChallenge || !revealMemory,
+                    onClick = {
                     val current = challenge ?: return@Button
                     if (FocusChallenge.isCorrect(challengeAnswer, current)) {
                         challenge = null
