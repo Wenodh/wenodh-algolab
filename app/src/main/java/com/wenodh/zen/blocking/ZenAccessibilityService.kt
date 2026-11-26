@@ -30,7 +30,8 @@ class ZenAccessibilityService : AccessibilityService() {
             packageName = packageName,
             ownPackageName = this.packageName,
             blockedPackages = BlockedAppsStore(this).blockedPackages(),
-            focusSessionActive = FocusSessionStore(this).isActive()
+            focusSessionActive = FocusSessionStore(this).isActive(),
+            protectedPackages = ProtectedPackages.forDevice(this)
         )
         if (!shouldBlock || packageName == lastBlockedPackage) {
             if (!shouldBlock) lastBlockedPackage = null
