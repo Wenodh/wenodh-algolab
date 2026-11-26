@@ -11,6 +11,7 @@ object InstalledAppCatalog {
     fun load(context: Context): List<InstalledApp> {
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         val pm = context.packageManager
+        val protectedPackages = ProtectedPackages.forDevice(context)
         val activities = if (Build.VERSION.SDK_INT >= 33) {
             pm.queryIntentActivities(intent, PackageManager.ResolveInfoFlags.of(0))
         } else {
@@ -20,7 +21,7 @@ object InstalledAppCatalog {
         return activities.asSequence()
             .mapNotNull { info ->
                 val packageName = info.activityInfo?.packageName ?: return@mapNotNull null
-                if (packageName == context.packageName) return@mapNotNull null
+                if (packageName in protectedPackages) return@mapNotNull null
                 val label = info.loadLabel(pm)?.toString()?.takeIf(String::isNotBlank) ?: packageName
                 InstalledApp(packageName, label)
             }
