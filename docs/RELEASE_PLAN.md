@@ -23,7 +23,7 @@
 - [x] Discover launcher apps using a targeted package visibility query (no QUERY_ALL_PACKAGES).
 - [x] Persist a user-managed blocked-app list locally.
 - [x] Add a foreground-package Accessibility Service with an in-app disclosure and explicit consent step.
-- [x] Show a restriction screen when a selected app is opened during an active focus session.
+- [x] Return Home and post a restriction notification when a selected app is opened during an active focus session.
 - [ ] Add permission-loss refresh/status handling across all resume paths and OEM compatibility tests.
 - [ ] Add durable blocked-app interruption events to session history.
 - [ ] Verify service behavior on an Android device/emulator.
