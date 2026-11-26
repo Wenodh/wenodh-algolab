@@ -7,7 +7,7 @@ This document is a release gate, not a promise that every restriction can be enf
 | Capability | Permission / mechanism | Current state |
 |---|---|---|
 | Focus notification | `POST_NOTIFICATIONS` on Android 13+ | Runtime request included |
-| Ongoing focus service | `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_SPECIAL_USE` | Declared; Play eligibility needs review |
+| Ongoing focus service | `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_SPECIAL_USE` | Declared; Play eligibility needs review |\n| Ambient playback | `FOREGROUND_SERVICE_MEDIA_PLAYBACK` while generated sound is active | Service promotes to mediaPlayback only when ambient audio is enabled |
 | Launcher app discovery | `<queries>` with MAIN + LAUNCHER intent | Implemented; no broad inventory permission |
 | App-switch detection | User-enabled Accessibility Service | Implemented; foreground package only |
 | DND | User-granted Notification Policy Access | Optional integration implemented; restores the previous interruption filter after the session |
@@ -31,7 +31,7 @@ Google Play requires an Accessibility API declaration and prominent disclosure/c
 
 ## Foreground service
 
-The timer implementation declares Android's `specialUse` foreground-service type with a subtype describing the user-started focus timer. This is not an automatic guarantee of Google Play approval. Before distribution, verify current Android requirements, demonstrate that a foreground service is necessary for the user-visible session, complete required Play Console declarations, and test Android 14+ behavior.
+The timer implementation declares Android's `specialUse` foreground-service type with a subtype describing the user-started focus timer. When the user enables ambient sound, the same service additionally declares the `mediaPlayback` foreground-service type and its corresponding permission while audio is active. This is not an automatic guarantee of Google Play approval. Before distribution, verify current Android requirements, demonstrate that a foreground service is necessary for the user-visible session, complete required Play Console declarations, and test Android 14+ behavior.
 
 Do not mislabel a focus timer as `mediaPlayback` or `dataSync`.
 
