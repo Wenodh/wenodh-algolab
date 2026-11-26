@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -49,6 +50,8 @@ import com.wenodh.zen.blocking.BlockedAppsStore
 import com.wenodh.zen.blocking.InstalledApp
 import com.wenodh.zen.blocking.InstalledAppCatalog
 import com.wenodh.zen.blocking.ZenAccessibilityService
+import com.wenodh.zen.focus.FocusChallenge
+import com.wenodh.zen.focus.MathChallenge
 import com.wenodh.zen.focus.FocusSessionService
 import com.wenodh.zen.focus.FocusSessionStore
 import kotlinx.coroutines.delay
@@ -92,6 +95,10 @@ class MainActivity : ComponentActivity() {
                             FocusSessionService.start(this)
                         },
                         onStop = { FocusSessionService.stop(this) },
+                        onChallengePassed = {
+                            sessionStore.endWithChallenge()
+                            FocusSessionService.stop(this)
+                        },
                         onManageBlockedApps = { showBlockingSettings = true },
                         serviceEnabled = accessibilityEnabled
                     )
@@ -117,6 +124,7 @@ private fun ZenHome(
     store: FocusSessionStore,
     onStart: (Int) -> Unit,
     onStop: () -> Unit,
+    onChallengePassed: () -> Unit,
     onManageBlockedApps: () -> Unit,
     serviceEnabled: Boolean
 ) {
@@ -125,6 +133,10 @@ private fun ZenHome(
     var active by remember { mutableStateOf(store.isActive()) }
     var todayMinutes by remember { mutableIntStateOf(store.todayCompletedMinutes()) }
     var todaySessions by remember { mutableIntStateOf(store.todayCompletedCount()) }
+    var blockedAttempts by remember { mutableIntStateOf(store.todayBlockedAttemptCount()) }
+    var challenge by remember { mutableStateOf<MathChallenge?>(null) }
+    var challengeAnswer by remember { mutableStateOf("") }
+    var challengeError by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         while (isActive) {
@@ -135,7 +147,8 @@ private fun ZenHome(
             }
             active = nowActive
             remaining = store.remainingMillis()
-            delay(1_000L)
+            if (active) blockedAttempts = store.todayBlockedAttemptCount()
+            delay(5_000L)
         }
     }
 
@@ -163,7 +176,14 @@ private fun ZenHome(
                     Text(if (active) timeText else "%02d:00".format(selectedMinutes), fontSize = 54.sp, fontWeight = FontWeight.Light, color = Color(0xFF183B30))
                     Text(if (active) "Stay with one thing." else "Choose a duration and begin.", color = Color(0xFF65736C))
                     if (active) {
-                        Button(onClick = onStop, modifier = Modifier.fillMaxWidth()) { Text("End session") }
+                        OutlinedButton(
+                            onClick = {
+                                challenge = FocusChallenge.create(level = 1)
+                                challengeAnswer = ""
+                                challengeError = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("End session · complete a challenge") }
                     } else {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             listOf(15, 25, 45, 60).forEach { minutes ->
@@ -180,6 +200,7 @@ private fun ZenHome(
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("Today's focus", fontWeight = FontWeight.SemiBold, color = Color(0xFF183B30))
                     Text("$todayMinutes minutes · $todaySessions completed sessions", color = Color(0xFF52645A), style = MaterialTheme.typography.bodyMedium)
+                    Text("$blockedAttempts blocked-app attempts today", color = Color(0xFF52645A), style = MaterialTheme.typography.bodySmall)
                 }
             }
             Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFFE7EFEA)), shape = RoundedCornerShape(18.dp)) {
@@ -192,8 +213,43 @@ private fun ZenHome(
                     OutlinedButton(onClick = onManageBlockedApps, modifier = Modifier.fillMaxWidth()) { Text("Manage blocked apps") }
                 }
             }
+            if (!serviceEnabled) {
+                Text("App blocking is currently inactive. Enable Accessibility access in App restrictions.", color = Color(0xFF9A5A18), style = MaterialTheme.typography.bodySmall)
+            }
             Spacer(Modifier.height(4.dp))
             Text("LOCAL-FIRST · NO ACCOUNT REQUIRED", color = Color(0xFF829088), fontSize = 10.sp, letterSpacing = 1.sp)
+            if (challenge != null) {
+                AlertDialog(
+                    onDismissRequest = { challenge = null },
+                    title = { Text("A quick pause before you leave") },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("Solve this to end the session early:")
+                            Text(challenge!!.prompt, style = MaterialTheme.typography.headlineMedium)
+                            OutlinedTextField(
+                                value = challengeAnswer,
+                                onValueChange = { challengeAnswer = it; challengeError = false },
+                                label = { Text("Your answer") },
+                                singleLine = true
+                            )
+                            if (challengeError) Text("That answer isn't correct. Try again.", color = MaterialTheme.colorScheme.error)
+                            Text("If you close this challenge, your focus session continues.")
+                        }
+                    },
+                    confirmButton = {
+                        Button(onClick = {
+                            val current = challenge ?: return@Button
+                            if (FocusChallenge.isCorrect(challengeAnswer, current)) {
+                                challenge = null
+                                onChallengePassed()
+                            } else challengeError = true
+                        }) { Text("Confirm and end") }
+                    },
+                    dismissButton = {
+                        OutlinedButton(onClick = { challenge = null }) { Text("Keep focusing") }
+                    }
+                )
+            }
         }
     }
 }
