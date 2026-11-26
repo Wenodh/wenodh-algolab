@@ -2,23 +2,28 @@
 
 **Disconnect. Focus. Be present.**
 
-Wenodh Zen is an Android-first, local-first focus application. This repository is being transitioned from the original Wenodh AlgoLab web project into a native Kotlin + Jetpack Compose Android app. The original project history remains available on `main`.
+Wenodh Zen is a native Android, local-first focus application built with Kotlin and Jetpack Compose. The original Wenodh AlgoLab web project and its history remain untouched on `main`; active Android work is isolated on `feature/wenodh-zen-foundation`.
 
-## Current implementation
+## Current features
 
-- Native Android application module (`com.wenodh.zen`)
-- Minimal Compose home screen
-- 15, 25, 45 and 60 minute focus presets
-- Durable focus deadline stored locally; remaining time is derived from the deadline rather than an in-memory countdown
-- Ongoing foreground-service notification while a session is active
-- Session state restored from local storage after activity/process recreation
-- GitHub Actions debug APK build
+- Focus sessions with a deadline-backed timer and ongoing notification.
+- Session recovery after process recreation and best-effort reboot recovery.
+- Work, Study, Reading, Wind down and custom focus profiles.
+- User-selected blocked-app list with Accessibility-based foreground app detection.
+- Math, memory and reflection challenges for intentional early exit.
+- Locally recorded session history and blocked-app attempts.
+- Optional Do Not Disturb integration with prior filter restoration.
+- Daily focus reminders scheduled with WorkManager; reminders never auto-start sessions.
+- Locally generated white, pink and brown noise, tied to the focus service and Android audio focus.
+- Daily and rolling seven-day summaries plus rule-based achievements.
+- No account, backend, analytics SDK or cloud sync.
 
 ## Build
 
 Requirements: JDK 17, Android SDK 35, Gradle 8.9.
 
 ```bash
+gradle :app:testDebugUnitTest
 gradle :app:assembleDebug
 ```
 
@@ -28,23 +33,25 @@ APK output:
 app/build/outputs/apk/debug/app-debug.apk
 ```
 
-The GitHub Actions workflow uploads the debug APK as the `wenodh-zen-debug` artifact.
+GitHub Actions runs unit tests before assembling the debug APK and uploads the APK as the `wenodh-zen-debug` artifact.
 
-## Product direction
+## Privacy and platform constraints
 
-The first release is intentionally functional-first: focus session engine, app restriction enforcement, challenge-based exit, schedules, profiles, DND integration, sounds, analytics and achievements. UI polish is deliberately secondary.
+App selections, session history and focus statistics are stored locally. Ambient sounds are generated on-device; no recordings are downloaded. The app does not need an account or network connection for its focus features.
 
-## Important platform limitation
+App restriction uses a user-enabled Accessibility Service to observe foreground package names only. It does not read screen text, keystrokes or notifications. This is best-effort enforcement, not a secure device lock; Android settings, emergency access and the ability to disable the service remain available. Google Play policy eligibility and required Accessibility API disclosures must be reviewed before distribution.
 
-App restriction enforcement is not yet implemented. Android does not expose a general public API for ordinary consumer apps to guarantee suspension of arbitrary apps. The planned Accessibility-based enforcement must be explicitly enabled by the user, disclosed clearly, tested across OEMs and reviewed against current Google Play policy. It must not be described as unbreakable.
-
-The ongoing session service currently uses Android's `specialUse` foreground-service type. Its eligibility and Play distribution requirements must be validated before a production release. See [Android permissions and platform constraints](docs/ANDROID_PERMISSIONS.md).
+The timer uses Android's `specialUse` foreground-service type. Its eligibility and Play Console declaration must be reviewed before release. See [Android permissions and platform constraints](docs/ANDROID_PERMISSIONS.md).
 
 ## Project docs
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Android permissions and platform constraints](docs/ANDROID_PERMISSIONS.md)
 - [Implementation status and release plan](docs/RELEASE_PLAN.md)
+
+## Release status
+
+Functional milestones are implemented on the feature branch. Final CI, physical-device/OEM testing, privacy/policy review and signed release preparation remain release gates. Debug APKs are for testing only; signing keys must never be committed.
 
 ## License
 
