@@ -1,3 +1,3 @@
 <resources>
-    <string name="accessibility_service_description">Detects when a selected blocked app comes to the foreground during a focus session and displays the focus restriction screen. Does not read screen content.</string>
+    <string name="accessibility_service_description">Detects when a selected blocked app comes to the foreground during a focus session and returns the user to Home with a notification. Does not read screen content.</string>
 </resources>
