@@ -109,6 +109,12 @@ internal class FocusSessionHistoryDb(context: Context) :
             arrayOf(SessionTimeline.STATUS_COMPLETED, startMillis.toString())
         ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
 
+    fun allBlockedAttemptCount(): Int =
+        readableDatabase.rawQuery(
+            "SELECT COUNT(*) FROM blocked_attempts",
+            null
+        ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
+
     fun challengeExitCount(): Int =
         readableDatabase.rawQuery(
             "SELECT COUNT(*) FROM sessions WHERE status = ?",
