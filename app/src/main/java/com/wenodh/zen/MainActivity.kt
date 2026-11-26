@@ -87,7 +87,12 @@ class MainActivity : ComponentActivity() {
         val dndController = FocusDndController(this)
         val scheduleStore = FocusScheduleStore(this)
         scheduleStore.scheduleNext()
-        if (sessionStore.hasPendingSession()) FocusSessionService.start(this)
+        sessionStore.finishIfExpired()
+        if (sessionStore.hasPendingSession()) {
+            runCatching { FocusSessionService.start(this) }.onFailure {
+                Toast.makeText(this, "Focus timer is saved, but Android did not restart its notification service.", Toast.LENGTH_LONG).show()
+            }
+        }
         setContent {
             MaterialTheme(colorScheme = lightColorScheme(
                 primary = Color(0xFF176B55),
@@ -182,6 +187,7 @@ private fun ZenHome(
     var customProfileDialog by remember { mutableStateOf(false) }
     var customName by remember { mutableStateOf("My focus") }
     var customDuration by remember { mutableStateOf("30") }
+    var customProfileError by remember { mutableStateOf(false) }
     var selectedAmbient by remember { mutableStateOf(ambientStore.selected()) }
     var dndEnabled by remember { mutableStateOf(dndController.isEnabledForFocus()) }
     var dndAccess by remember { mutableStateOf(dndController.hasAccess()) }
@@ -346,6 +352,10 @@ private fun ZenHome(
                                 if (dndAccess) {
                                     dndEnabled = !dndEnabled
                                     dndController.setEnabledForFocus(dndEnabled)
+                                    if (active) {
+                                        if (dndEnabled) dndController.applyForSession()
+                                        else dndController.restoreAfterSession()
+                                    }
                                 } else onOpenDndSettings()
                             }) { Text(if (dndEnabled) "Disable for focus" else "Enable for focus") }
                         }
@@ -481,7 +491,8 @@ private fun ZenHome(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(value = customName, onValueChange = { customName = it }, label = { Text("Profile name") }, singleLine = true)
-                    OutlinedTextField(value = customDuration, onValueChange = { customDuration = it.filter(Char::isDigit).take(3) }, label = { Text("Duration in minutes (5–180)") }, singleLine = true)
+                    OutlinedTextField(value = customDuration, onValueChange = { customDuration = it.filter(Char::isDigit).take(3); customProfileError = false }, label = { Text("Duration in minutes (5–180)") }, singleLine = true)
+                    if (customProfileError) Text("Enter a name and duration between 5 and 180 minutes.", color = MaterialTheme.colorScheme.error)
                 }
             },
             confirmButton = {
@@ -492,7 +503,8 @@ private fun ZenHome(
                         selectedProfile = profiles.selectedProfile()
                         selectedMinutes = selectedProfile.durationMinutes
                         customProfileDialog = false
-                    }
+                        customProfileError = false
+                    } else customProfileError = true
                 }) { Text("Save profile") }
             },
             dismissButton = { OutlinedButton(onClick = { customProfileDialog = false }) { Text("Cancel") } }
