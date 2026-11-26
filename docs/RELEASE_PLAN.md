@@ -55,6 +55,7 @@
 - [x] Add locally generated white, pink and brown noise (no bundled copyrighted recordings).
 - [x] Tie ambient playback to focus-session service lifecycle and Android audio focus.
 - [x] Add today's and rolling seven-day focus summaries.
+- [x] Add recent session history with status and blocked-app attempt counts.
 - [x] Add durable blocked-app attempt counts and challenge-exit counts.
 - [x] Add rule-based achievements with testable unlock thresholds.
 - [ ] Device-test audio focus changes, headset/Bluetooth routing, volume and service recovery.
@@ -67,7 +68,8 @@
 - [ ] Verify blocked-app enforcement and permission-loss UX on multiple Android versions/OEMs.
 - [ ] Verify ambient playback, audio focus, DND restoration and schedule reminders.
 - [ ] Review privacy disclosures, Accessibility API declaration, special-use FGS declaration and Play policy eligibility.
-- [x] Add app icon and versioned release notes.\n- [ ] Publish a hosted user-facing privacy policy.
+- [x] Add app icon and versioned release notes.
+- [ ] Publish a hosted user-facing privacy policy.
 - [ ] Configure release signing outside the repository and produce a signed release build.
 - [ ] Create a release tag only after all release gates pass.
 
