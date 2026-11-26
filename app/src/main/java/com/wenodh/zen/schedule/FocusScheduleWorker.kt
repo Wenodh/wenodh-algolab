@@ -16,7 +16,7 @@ class FocusScheduleWorker(context: Context, params: WorkerParameters) : Worker(c
         val schedule = FocusScheduleStore(applicationContext)
         if (!schedule.isEnabled()) return Result.success()
         runCatching { showReminder() }
-        schedule.scheduleNext()
+        schedule.scheduleNext(fromWorker = true)
         return Result.success()
     }
 
