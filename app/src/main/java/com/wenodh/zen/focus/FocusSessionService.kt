@@ -35,6 +35,7 @@ class FocusSessionService : Service() {
             ACTION_STOP -> {
                 store.interrupt()
                 AmbientSoundEngine.stop()
+                FocusDndController(this).restoreAfterSession()
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
                 return START_NOT_STICKY
@@ -71,6 +72,7 @@ class FocusSessionService : Service() {
             startForeground(NOTIFICATION_ID, notification)
         }
 
+        FocusDndController(this).applyForSession()
         AmbientSoundStore(this).selected()?.let(AmbientSoundEngine::start)
         ticker?.cancel()
         ticker = scope.launch {
@@ -81,6 +83,7 @@ class FocusSessionService : Service() {
             }
             if (store.finishIfExpired()) showCompletionNotification()
             AmbientSoundEngine.stop()
+            FocusDndController(this@FocusSessionService).restoreAfterSession()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
@@ -123,6 +126,7 @@ class FocusSessionService : Service() {
     override fun onDestroy() {
         ticker?.cancel()
         AmbientSoundEngine.stop()
+        FocusDndController(this).restoreAfterSession()
         scope.cancel()
         super.onDestroy()
     }
