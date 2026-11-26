@@ -394,6 +394,24 @@ private fun ZenHome(
                 }
             }
             item {
+                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Recent sessions", fontWeight = FontWeight.SemiBold)
+                        if (recentSessions.isEmpty()) {
+                            Text("Your completed and interrupted sessions will appear here.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                        } else {
+                            recentSessions.forEach { session ->
+                                Text(
+                                    "${formatSessionTime(session.startedAt)} · ${session.durationMinutes} min · ${session.status.lowercase().replace('_', ' ')} · ${session.blockedAttempts} app attempts",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFF52645A)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            item {
                 Text("LOCAL-FIRST · NO ACCOUNT REQUIRED", color = Color(0xFF829088), fontSize = 10.sp, letterSpacing = 1.sp)
             }
         }
