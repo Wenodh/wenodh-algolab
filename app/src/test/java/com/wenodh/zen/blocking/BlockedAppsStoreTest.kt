@@ -28,6 +28,13 @@ class BlockedAppsStoreTest {
     }
 
     @Test
+    fun neverBlocksProtectedDialerOrLauncherPackages() {
+        val protected = setOf("com.android.dialer", "com.android.launcher")
+        assertFalse(AppBlockPolicy.shouldBlock("com.android.dialer", "com.wenodh.zen", protected + blocked, true, protected))
+        assertFalse(AppBlockPolicy.shouldBlock("com.android.launcher", "com.wenodh.zen", protected + blocked, true, protected))
+    }
+
+    @Test
     fun ignoresMissingPackageName() {
         assertFalse(AppBlockPolicy.shouldBlock(null, "com.wenodh.zen", blocked, true))
     }
