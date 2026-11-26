@@ -32,7 +32,9 @@ class FocusDndController(context: Context) {
         if (!prefs.getBoolean(KEY_APPLIED, false)) return
         if (hasAccess()) {
             val previous = prefs.getInt(KEY_PREVIOUS_FILTER, NotificationManager.INTERRUPTION_FILTER_ALL)
-            runCatching { manager.setInterruptionFilter(previous) }
+            if (manager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_PRIORITY) {
+                runCatching { manager.setInterruptionFilter(previous) }
+            }
         }
         prefs.edit().remove(KEY_PREVIOUS_FILTER).putBoolean(KEY_APPLIED, false).apply()
     }
