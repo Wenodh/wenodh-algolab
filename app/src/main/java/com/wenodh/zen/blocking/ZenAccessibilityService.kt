@@ -20,14 +20,14 @@ class ZenAccessibilityService : AccessibilityService() {
             return
         }
 
-        if (!FocusSessionStore(this).isActive()) {
-            lastBlockedPackage = null
-            return
-        }
-
-        val blocked = BlockedAppsStore(this).blockedPackages()
-        if (packageName !in blocked || packageName == lastBlockedPackage) {
-            if (packageName !in blocked) lastBlockedPackage = null
+        val shouldBlock = AppBlockPolicy.shouldBlock(
+            packageName = packageName,
+            ownPackageName = this.packageName,
+            blockedPackages = BlockedAppsStore(this).blockedPackages(),
+            focusSessionActive = FocusSessionStore(this).isActive()
+        )
+        if (!shouldBlock || packageName == lastBlockedPackage) {
+            if (!shouldBlock) lastBlockedPackage = null
             return
         }
 
