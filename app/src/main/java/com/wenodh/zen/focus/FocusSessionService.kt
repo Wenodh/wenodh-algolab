@@ -43,12 +43,16 @@ class FocusSessionService : Service() {
             }
             ACTION_AMBIENT_STOP -> {
                 AmbientSoundEngine.stop()
+                if (store.isActive()) updateForegroundTypes(includeMediaPlayback = false)
                 return START_STICKY
             }
             ACTION_AMBIENT_START -> {
                 if (store.isActive()) {
                     val selected = AmbientSoundStore(this).selected()
-                    if (selected != null) AmbientSoundEngine.start(selected)
+                    if (selected != null) {
+                        updateForegroundTypes(includeMediaPlayback = true)
+                        AmbientSoundEngine.start(selected)
+                    }
                 }
                 return START_STICKY
             }
@@ -61,17 +65,7 @@ class FocusSessionService : Service() {
             return START_NOT_STICKY
         }
 
-        val notification = buildNotification(store.remainingMillis())
-        if (Build.VERSION.SDK_INT >= 34) {
-            ServiceCompat.startForeground(
-                this,
-                NOTIFICATION_ID,
-                notification,
-                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-            )
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
-        }
+        updateForegroundTypes(includeMediaPlayback = AmbientSoundStore(this).selected() != null)
 
         FocusDndController(this).applyForSession()
         AmbientSoundStore(this).selected()?.let(AmbientSoundEngine::start)
@@ -89,6 +83,19 @@ class FocusSessionService : Service() {
             stopSelf()
         }
         return START_STICKY
+    }
+
+    private fun updateForegroundTypes(includeMediaPlayback: Boolean) {
+        val notification = buildNotification(store.remainingMillis())
+        if (Build.VERSION.SDK_INT >= 34) {
+            var serviceTypes = android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            if (includeMediaPlayback) {
+                serviceTypes = serviceTypes or android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+            }
+            ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, serviceTypes)
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
     }
 
     private fun buildNotification(remainingMillis: Long): Notification {
