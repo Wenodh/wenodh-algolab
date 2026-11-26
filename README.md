@@ -47,7 +47,7 @@ The timer uses Android's `specialUse` foreground-service type. Its eligibility a
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Android permissions and platform constraints](docs/ANDROID_PERMISSIONS.md)
-- [Implementation status and release plan](docs/RELEASE_PLAN.md)
+- [Implementation status and release plan](docs/RELEASE_PLAN.md)\n- [Privacy policy draft](docs/PRIVACY_POLICY.md)
 
 ## Release status
 
