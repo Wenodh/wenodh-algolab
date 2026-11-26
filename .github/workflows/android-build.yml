@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: wenodh-zen-android-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   debug-apk:
     runs-on: ubuntu-latest
