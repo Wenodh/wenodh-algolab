@@ -44,7 +44,7 @@ internal class FocusSessionHistoryDb(context: Context) :
 
     fun todayCompletedMinutes(dayStartMillis: Long): Int {
         readableDatabase.rawQuery(
-            "SELECT COALESCE(SUM(duration_minutes), 0) FROM sessions WHERE status = ? AND started_at >= ?",
+            "SELECT COALESCE(SUM(duration_minutes), 0) FROM sessions WHERE status = ? AND finished_at >= ?",
             arrayOf(SessionTimeline.STATUS_COMPLETED, dayStartMillis.toString())
         ).use { cursor ->
             return if (cursor.moveToFirst()) cursor.getInt(0) else 0
