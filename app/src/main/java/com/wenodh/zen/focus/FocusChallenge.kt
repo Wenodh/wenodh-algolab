@@ -16,7 +16,7 @@ data class MathChallenge(
 
 data class MemoryChallenge(val sequence: String) : ExitChallenge {
     override val prompt: String = "Memorize the sequence, then enter it from memory."
-    override fun accepts(input: String): Boolean = input.filter(Char::isDigit) == sequence
+    override fun accepts(input: String): Boolean {\n        val normalized = input.filterNot(Char::isWhitespace)\n        return normalized.isNotEmpty() && normalized.all(Char::isDigit) && normalized == sequence\n    }
 }
 
 data class ReflectionChallenge(
