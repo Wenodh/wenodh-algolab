@@ -38,6 +38,7 @@ class ZenAccessibilityService : AccessibilityService() {
         }
 
         lastBlockedPackage = packageName
+        FocusSessionStore(this).recordBlockedAttempt(packageName)
         Log.i(TAG, "Blocked app launch intercepted: $packageName")
         // Accessibility global action returns the user to Home without starting
         // an Activity from the background (Android background-launch limits).
