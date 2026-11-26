@@ -51,6 +51,9 @@ class MainActivity : ComponentActivity() {
             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
         val store = FocusSessionStore(this)
+        // Reconcile after force-stop/process death and reattach the notification
+        // while this Activity is visible (a safe foreground-service start point).
+        if (store.hasPendingSession()) FocusSessionService.start(this)
         setContent {
             MaterialTheme(colorScheme = lightColorScheme(
                 primary = Color(0xFF176B55),
