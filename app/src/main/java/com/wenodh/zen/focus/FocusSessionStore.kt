@@ -109,6 +109,7 @@ class FocusSessionStore(context: Context) {
     fun allBlockedAttemptCount(): Int = history.allBlockedAttemptCount()
     fun allTimeCompletedMinutes(): Int = history.completedMinutesSince(0L)
     fun allTimeCompletedCount(): Int = history.completedCountSince(0L)
+    fun recentSessions(limit: Int = 10): List<FocusSessionRecord> = history.recentSessions(limit)
 
     private fun endsAtMillis(): Long = prefs.getLong(KEY_ENDS_AT, 0L)
 
