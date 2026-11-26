@@ -88,7 +88,6 @@ private fun ZenHome(
         while (isActive) {
             active = store.isActive()
             remaining = store.remainingMillis()
-            store.finishIfExpired()
             delay(500L)
         }
     }
