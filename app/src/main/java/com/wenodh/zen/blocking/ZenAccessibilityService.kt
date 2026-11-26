@@ -2,9 +2,9 @@ package com.wenodh.zen.blocking
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
-import android.view.accessibility.AccessibilityEvent
 import android.util.Log
-import com.wenodh.zen.MainActivity
+import android.view.accessibility.AccessibilityEvent
+import com.wenodh.zen.focus.FocusSessionStore
 
 /**
  * Observes foreground package transitions only. It does not read window text,
@@ -20,6 +20,11 @@ class ZenAccessibilityService : AccessibilityService() {
             return
         }
 
+        if (!FocusSessionStore(this).isActive()) {
+            lastBlockedPackage = null
+            return
+        }
+
         val blocked = BlockedAppsStore(this).blockedPackages()
         if (packageName !in blocked || packageName == lastBlockedPackage) {
             if (packageName !in blocked) lastBlockedPackage = null
@@ -28,7 +33,7 @@ class ZenAccessibilityService : AccessibilityService() {
 
         lastBlockedPackage = packageName
         Log.i(TAG, "Blocked app launch intercepted: $packageName")
-        // Move away from the restricted app before presenting our explanation.
+        // Move away from the restricted app before presenting the explanation.
         performGlobalAction(GLOBAL_ACTION_HOME)
         runCatching {
             startActivity(
