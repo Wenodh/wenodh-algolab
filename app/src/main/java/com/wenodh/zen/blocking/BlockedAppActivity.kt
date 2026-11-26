@@ -2,6 +2,7 @@ package com.wenodh.zen.blocking
 
 import android.content.Intent
 import android.os.Bundle
+import com.wenodh.zen.MainActivity
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
