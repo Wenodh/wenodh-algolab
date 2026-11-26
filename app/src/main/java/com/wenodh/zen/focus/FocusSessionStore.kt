@@ -34,6 +34,34 @@ class FocusSessionStore(context: Context) {
     }
 
     @Synchronized
+    fun endWithChallenge(): Boolean {
+        if (!hasPendingSession()) return false
+        history.finishSession(
+            prefs.getString(KEY_SESSION_ID, "").orEmpty(),
+            SessionTimeline.STATUS_CHALLENGE_EXIT,
+            System.currentTimeMillis()
+        )
+        clearActiveState()
+        return true
+    }
+
+    @Synchronized
+    fun recordBlockedAttempt(packageName: String): Boolean {
+        if (!isActive() || packageName.isBlank()) return false
+        val id = prefs.getString(KEY_SESSION_ID, "").orEmpty()
+        if (id.isBlank()) return false
+        history.recordBlockedAttempt(id, packageName, System.currentTimeMillis())
+        return true
+    }
+
+    fun activeSessionBlockedAttemptCount(): Int {
+        val id = prefs.getString(KEY_SESSION_ID, "").orEmpty()
+        return if (id.isBlank()) 0 else history.blockedAttemptCount(id)
+    }
+
+    fun todayBlockedAttemptCount(): Int = history.todayBlockedAttemptCount(startOfToday())
+
+    @Synchronized
     fun interrupt(): Boolean {
         if (!hasPendingSession()) return false
         history.finishSession(
