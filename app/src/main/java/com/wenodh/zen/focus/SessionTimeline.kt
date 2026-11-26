@@ -14,4 +14,5 @@ object SessionTimeline {
     const val STATUS_ACTIVE = "ACTIVE"
     const val STATUS_COMPLETED = "COMPLETED"
     const val STATUS_INTERRUPTED = "INTERRUPTED"
+    const val STATUS_CHALLENGE_EXIT = "CHALLENGE_EXIT"
 }
