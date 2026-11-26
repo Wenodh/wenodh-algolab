@@ -2,37 +2,38 @@
 
 This document is a release gate, not a promise that every restriction can be enforced on every device.
 
-## Current foundation
+## Current foundation and app restrictions
 
 | Capability | Permission / mechanism | Current state |
 |---|---|---|
 | Focus notification | `POST_NOTIFICATIONS` on Android 13+ | Runtime request included |
 | Ongoing focus service | `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_SPECIAL_USE` | Declared; Play eligibility needs review |
-| App usage history | `PACKAGE_USAGE_STATS` special access | Not implemented |
-| App-switch detection | User-enabled Accessibility Service | Not implemented |
-| Do Not Disturb | Notification Policy Access | Not implemented |
+| Launcher app discovery | `<queries>` with MAIN + LAUNCHER intent | Implemented; no broad inventory permission |
+| App-switch detection | User-enabled Accessibility Service | Implemented; foreground package only |
+| DND | Notification Policy Access | Not implemented |
 | Exact schedule alarms | `SCHEDULE_EXACT_ALARM` where justified/available | Not implemented |
+
+## App discovery and privacy
+
+Wenodh Zen queries activities that match the Android launcher intent using a targeted `<queries>` declaration. It does not request `QUERY_ALL_PACKAGES`. Only launcher-visible apps are shown in the selection list; some apps without launcher activities may not appear. Do not add broad package visibility unless a policy review establishes that it is necessary and eligible.
+
+The app names and package identifiers selected for blocking are stored locally. No installed-app inventory or usage history is uploaded.
+
+## Accessibility service
+
+The service observes `TYPE_WINDOW_STATE_CHANGED` and `TYPE_WINDOWS_CHANGED` events and uses only the event package name to determine whether a selected app is foregrounded. It does not retrieve window content, screen text, keystrokes or notifications. Enforcement is attempted only while a persisted focus session is active.
+
+Before opening Android Accessibility Settings, the app displays a separate in-app disclosure and requires an affirmative tap. The user can disable the service at any time in Android Settings. Wenodh Zen does not prevent disabling or uninstalling itself.
+
+This is best-effort consumer app restriction, not a secure kiosk or device-owner lock. OEM background behavior, system UI, split-screen, app transitions and Android version differences can affect enforcement. Emergency calls and system settings must remain accessible. If the service is disabled, the app must show that blocking is inactive.
+
+Google Play requires an Accessibility API declaration and prominent disclosure/consent for non-accessibility-tool uses. The service must be reviewed against current Play policy before distribution. Do not set `isAccessibilityTool=true`; Wenodh Zen is not an accessibility tool.
 
 ## Foreground service
 
-The first timer implementation declares the Android 14+ `specialUse` foreground-service type with a subtype describing the user-started focus timer. This is not an automatic guarantee of Google Play approval. Before distribution, verify the current Android requirements, demonstrate that a foreground service is necessary for the user-visible session, complete required Play Console declarations, and test Android 14+ behavior.
+The timer implementation declares Android's `specialUse` foreground-service type with a subtype describing the user-started focus timer. This is not an automatic guarantee of Google Play approval. Before distribution, verify current Android requirements, demonstrate that a foreground service is necessary for the user-visible session, complete required Play Console declarations, and test Android 14+ behavior.
 
 Do not mislabel a focus timer as `mediaPlayback` or `dataSync`.
-
-## App restrictions
-
-Android does not provide ordinary consumer apps a universal public API to freeze arbitrary third-party applications. The proposed implementation uses a user-enabled Accessibility Service to observe foreground app transitions and display a restriction screen for selected packages. This is best-effort enforcement, not a secure kiosk or device-owner lock.
-
-The service must:
-- Explain exactly what it observes and why before the user enables it.
-- Request enablement through Android Settings; never attempt to toggle it itself.
-- Avoid collecting or transmitting accessibility content.
-- Keep emergency calls, system settings and critical system UI accessible.
-- Detect when the service is disabled and clearly report that enforcement is inactive.
-- Avoid claiming that the user cannot disable or uninstall Wenodh Zen.
-- Be reviewed against the current Google Play Accessibility API policy and disclosure requirements before publication.
-
-For stronger managed-device enforcement, investigate Android Enterprise/device-owner provisioning as a separate deployment mode. Do not imply that this is available to a normal consumer install.
 
 ## DND and schedules
 
