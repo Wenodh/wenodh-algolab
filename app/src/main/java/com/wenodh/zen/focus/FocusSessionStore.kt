@@ -16,6 +16,7 @@ class FocusSessionStore(context: Context) {
     @Synchronized
     fun start(durationMinutes: Int) {
         require(durationMinutes in 1..180) { "Duration must be between 1 and 180 minutes." }
+        finishIfExpired()
         interrupt()
         val startedAt = System.currentTimeMillis()
         val endsAt = startedAt + durationMinutes * 60_000L
