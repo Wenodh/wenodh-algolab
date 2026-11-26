@@ -3,6 +3,9 @@ package com.wenodh.zen
 import android.Manifest
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.TimePickerDialog
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import android.content.Intent
 import android.widget.Toast
 import android.content.pm.PackageManager
@@ -63,6 +66,7 @@ import com.wenodh.zen.focus.FocusProfile
 import com.wenodh.zen.focus.FocusProfileStore
 import com.wenodh.zen.focus.FocusSessionService
 import com.wenodh.zen.focus.FocusSessionStore
+import com.wenodh.zen.focus.FocusSessionRecord
 import com.wenodh.zen.schedule.FocusScheduleStore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -170,6 +174,7 @@ private fun ZenHome(
     var blockedAttempts by remember { mutableIntStateOf(store.todayBlockedAttemptCount()) }
     var weeklyMinutes by remember { mutableIntStateOf(store.last7DaysCompletedMinutes()) }
     var weeklySessions by remember { mutableIntStateOf(store.last7DaysCompletedCount()) }
+    var recentSessions by remember { mutableStateOf(store.recentSessions()) }
     var challenge by remember { mutableStateOf<ExitChallenge?>(null) }
     var revealMemory by remember { mutableStateOf(false) }
     var challengeAnswer by remember { mutableStateOf("") }
@@ -199,6 +204,7 @@ private fun ZenHome(
                 todaySessions = store.todayCompletedCount()
                 weeklyMinutes = store.last7DaysCompletedMinutes()
                 weeklySessions = store.last7DaysCompletedCount()
+                recentSessions = store.recentSessions()
             }
             active = nowActive
             remaining = store.remainingMillis()
@@ -552,3 +558,7 @@ private fun AppBlockingSettings(
         }
     }
 }
+
+
+private fun formatSessionTime(timestamp: Long): String =
+    SimpleDateFormat("EEE, d MMM · h:mm a", Locale.getDefault()).format(Date(timestamp))
