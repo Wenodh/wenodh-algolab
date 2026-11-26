@@ -18,6 +18,7 @@ import com.wenodh.zen.focus.FocusSessionStore
  */
 class ZenAccessibilityService : AccessibilityService() {
     private var lastBlockedPackage: String? = null
+    private val protectedPackages by lazy(LazyThreadSafetyMode.NONE) { ProtectedPackages.forDevice(this) }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val packageName = event?.packageName?.toString() ?: return
@@ -31,7 +32,7 @@ class ZenAccessibilityService : AccessibilityService() {
             ownPackageName = this.packageName,
             blockedPackages = BlockedAppsStore(this).blockedPackages(),
             focusSessionActive = FocusSessionStore(this).isActive(),
-            protectedPackages = ProtectedPackages.forDevice(this)
+            protectedPackages = protectedPackages
         )
         if (!shouldBlock || packageName == lastBlockedPackage) {
             if (!shouldBlock) lastBlockedPackage = null
