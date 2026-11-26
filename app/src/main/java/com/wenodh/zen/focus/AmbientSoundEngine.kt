@@ -1,6 +1,8 @@
 package com.wenodh.zen.focus
 
 import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.media.AudioFormat
 import android.media.AudioTrack
 import java.util.concurrent.atomic.AtomicBoolean
@@ -16,6 +18,8 @@ object AmbientSoundEngine {
     private val running = AtomicBoolean(false)
     @Volatile private var track: AudioTrack? = null
     @Volatile private var writer: Thread? = null
+    @Volatile private var audioManager: AudioManager? = null
+    @Volatile private var focusRequest: AudioFocusRequest? = null
 
     @Synchronized
     fun start(sound: Sound) {
@@ -25,13 +29,22 @@ object AmbientSoundEngine {
             AudioFormat.CHANNEL_OUT_MONO,
             AudioFormat.ENCODING_PCM_16BIT
         ).coerceAtLeast(4096)
+        val attributes = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_MEDIA)
+            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+            .build()
+        val manager = appAudioManager ?: return
+        val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+            .setAudioAttributes(attributes)
+            .setOnAudioFocusChangeListener { change ->
+                if (change == AudioManager.AUDIOFOCUS_LOSS || change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) stop()
+            }
+            .build()
+        if (manager.requestAudioFocus(request) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) return
+        audioManager = manager
+        focusRequest = request
         val audioTrack = AudioTrack.Builder()
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
-            )
+            .setAudioAttributes(attributes)
             .setAudioFormat(
                 AudioFormat.Builder()
                     .setSampleRate(SAMPLE_RATE)
@@ -81,5 +94,17 @@ object AmbientSoundEngine {
         writer = null
         track?.let { audio -> runCatching { audio.pause(); audio.flush(); audio.release() } }
         track = null
+        val manager = audioManager
+        val request = focusRequest
+        if (manager != null && request != null) runCatching { manager.abandonAudioFocusRequest(request) }
+        audioManager = null
+        focusRequest = null
+    }
+
+    // AudioManager is resolved lazily from the application context supplied by the service.
+    @Volatile private var appAudioManager: AudioManager? = null
+
+    fun initialize(context: android.content.Context) {
+        appAudioManager = context.applicationContext.getSystemService(AudioManager::class.java)
     }
 }
