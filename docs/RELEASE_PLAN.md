@@ -67,7 +67,7 @@
 - [ ] Verify blocked-app enforcement and permission-loss UX on multiple Android versions/OEMs.
 - [ ] Verify ambient playback, audio focus, DND restoration and schedule reminders.
 - [ ] Review privacy disclosures, Accessibility API declaration, special-use FGS declaration and Play policy eligibility.
-- [ ] Add app icon, versioned release notes and user-facing privacy policy.
+- [x] Add app icon and versioned release notes.\n- [ ] Publish a hosted user-facing privacy policy.
 - [ ] Configure release signing outside the repository and produce a signed release build.
 - [ ] Create a release tag only after all release gates pass.
 
