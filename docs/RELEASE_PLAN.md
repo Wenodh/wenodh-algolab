@@ -20,11 +20,13 @@
 
 ## Milestone 2 — App restrictions
 
-- [ ] Installed-app discovery with package visibility handling.
-- [ ] User-managed blocked and allowed app lists.
-- [ ] Accessibility service with clear disclosure and settings flow.
-- [ ] Restriction overlay/screen and interruption event tracking.
-- [ ] Permission-loss detection and OEM compatibility tests.
+- [x] Discover launcher apps using a targeted package visibility query (no QUERY_ALL_PACKAGES).
+- [x] Persist a user-managed blocked-app list locally.
+- [x] Add a foreground-package Accessibility Service with an in-app disclosure and explicit consent step.
+- [x] Show a restriction screen when a selected app is opened during an active focus session.
+- [ ] Add permission-loss refresh/status handling across all resume paths and OEM compatibility tests.
+- [ ] Add durable blocked-app interruption events to session history.
+- [ ] Verify service behavior on an Android device/emulator.
 - [ ] Google Play policy review before production distribution.
 
 ## Milestone 3 — Challenge-based exit
