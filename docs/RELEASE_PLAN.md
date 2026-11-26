@@ -24,7 +24,8 @@
 - [x] Discover launcher apps using a targeted package visibility query (no QUERY_ALL_PACKAGES).
 - [x] Persist a user-managed blocked-app list locally.
 - [x] Add a foreground-package Accessibility Service with an in-app disclosure and explicit consent step.
-- [x] Return Home and post a restriction notification when a selected app is opened during an active focus session.\n- [x] Protect the app itself, default dialer, emergency dialer, default launcher, Settings and core system UI from blocking.
+- [x] Return Home and post a restriction notification when a selected app is opened during an active focus session.
+- [x] Protect the app itself, default dialer, emergency dialer, default launcher, Settings and core system UI from blocking.
 - [x] Persist blocked-app attempts against the active session.
 - [x] Refresh Accessibility permission status when the app returns to foreground.
 - [ ] Verify service behavior and notification delivery on physical devices/OEMs.
