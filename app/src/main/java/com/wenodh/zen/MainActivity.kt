@@ -56,13 +56,14 @@ import com.wenodh.zen.blocking.ZenAccessibilityService
 import com.wenodh.zen.focus.AmbientSoundEngine
 import com.wenodh.zen.focus.AmbientSoundStore
 import com.wenodh.zen.focus.FocusAchievements
+import com.wenodh.zen.focus.ExitChallenge
+import com.wenodh.zen.focus.MemoryChallenge
 import com.wenodh.zen.focus.FocusChallenge
 import com.wenodh.zen.focus.FocusDndController
 import com.wenodh.zen.focus.FocusProfile
 import com.wenodh.zen.focus.FocusProfileStore
 import com.wenodh.zen.focus.FocusSessionService
 import com.wenodh.zen.focus.FocusSessionStore
-import com.wenodh.zen.focus.MathChallenge
 import com.wenodh.zen.schedule.FocusScheduleStore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -167,7 +168,8 @@ private fun ZenHome(
     var blockedAttempts by remember { mutableIntStateOf(store.todayBlockedAttemptCount()) }
     var weeklyMinutes by remember { mutableIntStateOf(store.last7DaysCompletedMinutes()) }
     var weeklySessions by remember { mutableIntStateOf(store.last7DaysCompletedCount()) }
-    var challenge by remember { mutableStateOf<MathChallenge?>(null) }
+    var challenge by remember { mutableStateOf<ExitChallenge?>(null) }
+    var revealMemory by remember { mutableStateOf(false) }
     var challengeAnswer by remember { mutableStateOf("") }
     var challengeError by remember { mutableStateOf(false) }
     var customProfileDialog by remember { mutableStateOf(false) }
@@ -178,6 +180,14 @@ private fun ZenHome(
     var dndAccess by remember { mutableStateOf(dndController.hasAccess()) }
     var scheduleEnabled by remember { mutableStateOf(scheduleStore.isEnabled()) }
     var scheduleTime by remember { mutableStateOf("%02d:%02d".format(scheduleStore.hour(), scheduleStore.minute())) }
+
+    LaunchedEffect(challenge) {
+        revealMemory = challenge is MemoryChallenge
+        if (challenge is MemoryChallenge) {
+            delay(2_500L)
+            revealMemory = false
+        }
+    }
 
     LaunchedEffect(Unit) {
         while (isActive) {
@@ -387,14 +397,36 @@ private fun ZenHome(
             title = { Text("A quick pause before you leave") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Solve this to end the session early:")
-                    Text(challenge!!.prompt, style = MaterialTheme.typography.headlineMedium)
-                    OutlinedTextField(
-                        value = challengeAnswer,
-                        onValueChange = { challengeAnswer = it; challengeError = false },
-                        label = { Text("Your answer") },
-                        singleLine = true
-                    )
+                    Text("Choose a short exit challenge:")
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OutlinedButton(onClick = {
+                            challenge = FocusChallenge.create(level = selectedProfile.challengeLevel)
+                            challengeAnswer = ""
+                            challengeError = false
+                        }) { Text("Math") }
+                        OutlinedButton(onClick = {
+                            challenge = FocusChallenge.createMemory()
+                            challengeAnswer = ""
+                            challengeError = false
+                        }) { Text("Memory") }
+                        OutlinedButton(onClick = {
+                            challenge = FocusChallenge.createReflection()
+                            challengeAnswer = ""
+                            challengeError = false
+                        }) { Text("Reflect") }
+                    }
+                    Text(challenge!!.prompt, style = MaterialTheme.typography.bodyLarge)
+                    if (challenge is MemoryChallenge && revealMemory) {
+                        Text((challenge as MemoryChallenge).sequence, style = MaterialTheme.typography.headlineMedium)
+                    } else {
+                        OutlinedTextField(
+                            value = challengeAnswer,
+                            onValueChange = { challengeAnswer = it; challengeError = false },
+                            label = { Text(if (challenge is ReflectionChallenge) "Your reflection" else "Your answer") },
+                            singleLine = challenge !is ReflectionChallenge
+                        )
+                    }
+                    if (challenge is MemoryChallenge && revealMemory) Text("Memorize it — the sequence will hide in a moment.")
                     if (challengeError) Text("That answer isn't correct. Try again.", color = MaterialTheme.colorScheme.error)
                     Text("If you close this challenge, your focus session continues.")
                 }
