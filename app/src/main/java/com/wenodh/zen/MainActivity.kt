@@ -2,6 +2,7 @@ package com.wenodh.zen
 
 import android.Manifest
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -43,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,10 +53,17 @@ import com.wenodh.zen.blocking.BlockedAppsStore
 import com.wenodh.zen.blocking.InstalledApp
 import com.wenodh.zen.blocking.InstalledAppCatalog
 import com.wenodh.zen.blocking.ZenAccessibilityService
+import com.wenodh.zen.focus.AmbientSoundEngine
+import com.wenodh.zen.focus.AmbientSoundStore
+import com.wenodh.zen.focus.FocusAchievements
 import com.wenodh.zen.focus.FocusChallenge
-import com.wenodh.zen.focus.MathChallenge
+import com.wenodh.zen.focus.FocusDndController
+import com.wenodh.zen.focus.FocusProfile
+import com.wenodh.zen.focus.FocusProfileStore
 import com.wenodh.zen.focus.FocusSessionService
 import com.wenodh.zen.focus.FocusSessionStore
+import com.wenodh.zen.focus.MathChallenge
+import com.wenodh.zen.schedule.FocusScheduleStore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
@@ -68,6 +78,11 @@ class MainActivity : ComponentActivity() {
         }
         val sessionStore = FocusSessionStore(this)
         val blockedAppsStore = BlockedAppsStore(this)
+        val profileStore = FocusProfileStore(this)
+        val ambientStore = AmbientSoundStore(this)
+        val dndController = FocusDndController(this)
+        val scheduleStore = FocusScheduleStore(this)
+        scheduleStore.scheduleNext()
         if (sessionStore.hasPendingSession()) FocusSessionService.start(this)
         setContent {
             MaterialTheme(colorScheme = lightColorScheme(
@@ -90,6 +105,10 @@ class MainActivity : ComponentActivity() {
                 } else {
                     ZenHome(
                         store = sessionStore,
+                        profiles = profileStore,
+                        ambientStore = ambientStore,
+                        dndController = dndController,
+                        scheduleStore = scheduleStore,
                         onStart = { minutes ->
                             sessionStore.start(minutes)
                             FocusSessionService.start(this)
@@ -98,6 +117,10 @@ class MainActivity : ComponentActivity() {
                         onChallengePassed = {
                             sessionStore.endWithChallenge()
                             FocusSessionService.stop(this)
+                        },
+                        onAmbientChange = { FocusSessionService.setAmbientSound(this, it) },
+                        onOpenDndSettings = {
+                            startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
                         },
                         onManageBlockedApps = { showBlockingSettings = true },
                         serviceEnabled = accessibilityEnabled
@@ -122,21 +145,39 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun ZenHome(
     store: FocusSessionStore,
+    profiles: FocusProfileStore,
+    ambientStore: AmbientSoundStore,
+    dndController: FocusDndController,
+    scheduleStore: FocusScheduleStore,
     onStart: (Int) -> Unit,
     onStop: () -> Unit,
     onChallengePassed: () -> Unit,
+    onAmbientChange: (AmbientSoundEngine.Sound?) -> Unit,
+    onOpenDndSettings: () -> Unit,
     onManageBlockedApps: () -> Unit,
     serviceEnabled: Boolean
 ) {
-    var selectedMinutes by remember { mutableIntStateOf(25) }
+    val context = LocalContext.current
+    var selectedProfile by remember { mutableStateOf(profiles.selectedProfile()) }
+    var selectedMinutes by remember { mutableIntStateOf(selectedProfile.durationMinutes) }
     var remaining by remember { mutableStateOf(store.remainingMillis()) }
     var active by remember { mutableStateOf(store.isActive()) }
     var todayMinutes by remember { mutableIntStateOf(store.todayCompletedMinutes()) }
     var todaySessions by remember { mutableIntStateOf(store.todayCompletedCount()) }
     var blockedAttempts by remember { mutableIntStateOf(store.todayBlockedAttemptCount()) }
+    var weeklyMinutes by remember { mutableIntStateOf(store.last7DaysCompletedMinutes()) }
+    var weeklySessions by remember { mutableIntStateOf(store.last7DaysCompletedCount()) }
     var challenge by remember { mutableStateOf<MathChallenge?>(null) }
     var challengeAnswer by remember { mutableStateOf("") }
     var challengeError by remember { mutableStateOf(false) }
+    var customProfileDialog by remember { mutableStateOf(false) }
+    var customName by remember { mutableStateOf("My focus") }
+    var customDuration by remember { mutableStateOf("30") }
+    var selectedAmbient by remember { mutableStateOf(ambientStore.selected()) }
+    var dndEnabled by remember { mutableStateOf(dndController.isEnabledForFocus()) }
+    var dndAccess by remember { mutableStateOf(dndController.hasAccess()) }
+    var scheduleEnabled by remember { mutableStateOf(scheduleStore.isEnabled()) }
+    var scheduleTime by remember { mutableStateOf("%02d:%02d".format(scheduleStore.hour(), scheduleStore.minute())) }
 
     LaunchedEffect(Unit) {
         while (isActive) {
@@ -144,113 +185,258 @@ private fun ZenHome(
             if (nowActive != active) {
                 todayMinutes = store.todayCompletedMinutes()
                 todaySessions = store.todayCompletedCount()
+                weeklyMinutes = store.last7DaysCompletedMinutes()
+                weeklySessions = store.last7DaysCompletedCount()
             }
             active = nowActive
             remaining = store.remainingMillis()
-            if (active) blockedAttempts = store.todayBlockedAttemptCount()
+            blockedAttempts = store.todayBlockedAttemptCount()
+            dndAccess = dndController.hasAccess()
             delay(5_000L)
         }
     }
 
     val seconds = (remaining / 1000L).coerceAtLeast(0L)
     val timeText = "%02d:%02d".format(seconds / 60L, seconds % 60L)
+    val achievements = FocusAchievements.evaluate(
+        completedSessions = store.allTimeCompletedCount(),
+        completedMinutes = store.allTimeCompletedMinutes(),
+        challengeExits = store.challengeExitCount(),
+        blockedAttempts = store.todayBlockedAttemptCount()
+    )
 
     Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFF5F7F5)) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 36.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text("WENODH ZEN", color = Color(0xFF176B55), fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-            Text("Disconnect. Focus. Be present.", style = MaterialTheme.typography.bodyLarge, color = Color(0xFF65736C))
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(28.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("WENODH ZEN", color = Color(0xFF176B55), fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                    Text("Disconnect. Focus. Be present.", style = MaterialTheme.typography.bodyLarge, color = Color(0xFF65736C))
+                }
+            }
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
                 ) {
-                    Text(if (active) "FOCUS IN PROGRESS" else "READY TO FOCUS", color = Color(0xFF65736C), fontSize = 12.sp, letterSpacing = 1.5.sp)
-                    Text(if (active) timeText else "%02d:00".format(selectedMinutes), fontSize = 54.sp, fontWeight = FontWeight.Light, color = Color(0xFF183B30))
-                    Text(if (active) "Stay with one thing." else "Choose a duration and begin.", color = Color(0xFF65736C))
-                    if (active) {
-                        OutlinedButton(
-                            onClick = {
-                                challenge = FocusChallenge.create(level = 1)
-                                challengeAnswer = ""
-                                challengeError = false
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("End session · complete a challenge") }
-                    } else {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf(15, 25, 45, 60).forEach { minutes ->
-                                OutlinedButton(onClick = { selectedMinutes = minutes }, shape = RoundedCornerShape(12.dp)) {
-                                    Text("$minutes")
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(22.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(if (active) "FOCUS IN PROGRESS · ${selectedProfile.label.uppercase()}" else "READY TO FOCUS · ${selectedProfile.label.uppercase()}", color = Color(0xFF65736C), fontSize = 11.sp, letterSpacing = 1.sp)
+                        Text(if (active) timeText else "%02d:00".format(selectedMinutes), fontSize = 52.sp, fontWeight = FontWeight.Light, color = Color(0xFF183B30))
+                        Text(if (active) "Stay with one thing." else "Choose a profile and begin.", color = Color(0xFF65736C))
+                        if (active) {
+                            OutlinedButton(
+                                onClick = {
+                                    challenge = FocusChallenge.create(level = selectedProfile.challengeLevel)
+                                    challengeAnswer = ""
+                                    challengeError = false
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("End session · complete a challenge") }
+                        } else {
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                items(profiles.profiles(), key = FocusProfile::id) { profile ->
+                                    OutlinedButton(
+                                        onClick = {
+                                            profiles.select(profile.id)
+                                            selectedProfile = profile
+                                            selectedMinutes = profile.durationMinutes
+                                        },
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) { Text(if (profile.id == selectedProfile.id) "✓ ${profile.label}" else profile.label) }
+                                }
+                                item {
+                                    OutlinedButton(onClick = { customProfileDialog = true }, shape = RoundedCornerShape(12.dp)) { Text("+ Custom") }
                                 }
                             }
+                            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                listOf(15, 25, 45, 60).forEach { minutes ->
+                                    OutlinedButton(onClick = { selectedMinutes = minutes }, shape = RoundedCornerShape(12.dp)) {
+                                        Text("$minutes")
+                                    }
+                                }
+                            }
+                            Button(onClick = { onStart(selectedMinutes) }, modifier = Modifier.fillMaxWidth()) { Text("Start focus") }
                         }
-                        Button(onClick = { onStart(selectedMinutes) }, modifier = Modifier.fillMaxWidth()) { Text("Start focus") }
                     }
                 }
             }
-            Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp)) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Today's focus", fontWeight = FontWeight.SemiBold, color = Color(0xFF183B30))
-                    Text("$todayMinutes minutes · $todaySessions completed sessions", color = Color(0xFF52645A), style = MaterialTheme.typography.bodyMedium)
-                    Text("$blockedAttempts blocked-app attempts today", color = Color(0xFF52645A), style = MaterialTheme.typography.bodySmall)
+            item {
+                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text("Today's focus", fontWeight = FontWeight.SemiBold, color = Color(0xFF183B30))
+                        Text("$todayMinutes minutes · $todaySessions completed sessions", color = Color(0xFF52645A), style = MaterialTheme.typography.bodyMedium)
+                        Text("$blockedAttempts blocked-app attempts", color = Color(0xFF52645A), style = MaterialTheme.typography.bodySmall)
+                        Text("Last 7 days: $weeklyMinutes minutes · $weeklySessions sessions", color = Color(0xFF52645A), style = MaterialTheme.typography.bodySmall)
+                    }
                 }
             }
-            Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFFE7EFEA)), shape = RoundedCornerShape(18.dp)) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("App restrictions", fontWeight = FontWeight.SemiBold, color = Color(0xFF183B30))
-                    Text(
-                        if (serviceEnabled) "Accessibility monitoring is enabled." else "Enable the service to enforce your selected blocked apps.",
-                        color = Color(0xFF52645A), style = MaterialTheme.typography.bodyMedium
-                    )
-                    OutlinedButton(onClick = onManageBlockedApps, modifier = Modifier.fillMaxWidth()) { Text("Manage blocked apps") }
+            item {
+                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFFE7EFEA)), shape = RoundedCornerShape(18.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("App restrictions", fontWeight = FontWeight.SemiBold, color = Color(0xFF183B30))
+                        Text(
+                            if (serviceEnabled) "Accessibility monitoring is enabled." else "App blocking is inactive until Accessibility access is enabled.",
+                            color = if (serviceEnabled) Color(0xFF52645A) else Color(0xFF9A5A18),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        OutlinedButton(onClick = onManageBlockedApps, modifier = Modifier.fillMaxWidth()) { Text("Manage blocked apps") }
+                    }
                 }
             }
-            if (!serviceEnabled) {
-                Text("App blocking is currently inactive. Enable Accessibility access in App restrictions.", color = Color(0xFF9A5A18), style = MaterialTheme.typography.bodySmall)
+            item {
+                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Ambient sound", fontWeight = FontWeight.SemiBold)
+                        Text("Generated on-device. No tracks or data are downloaded.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf(
+                                "Off" to null,
+                                "White" to AmbientSoundEngine.Sound.WHITE,
+                                "Pink" to AmbientSoundEngine.Sound.PINK,
+                                "Brown" to AmbientSoundEngine.Sound.BROWN
+                            ).forEach { (label, sound) ->
+                                OutlinedButton(onClick = {
+                                    selectedAmbient = sound
+                                    onAmbientChange(sound)
+                                }) { Text(if (selectedAmbient == sound) "✓ $label" else label) }
+                            }
+                        }
+                    }
+                }
             }
-            Spacer(Modifier.height(4.dp))
-            Text("LOCAL-FIRST · NO ACCOUNT REQUIRED", color = Color(0xFF829088), fontSize = 10.sp, letterSpacing = 1.sp)
-            if (challenge != null) {
-                AlertDialog(
-                    onDismissRequest = { challenge = null },
-                    title = { Text("A quick pause before you leave") },
-                    text = {
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("Solve this to end the session early:")
-                            Text(challenge!!.prompt, style = MaterialTheme.typography.headlineMedium)
-                            OutlinedTextField(
-                                value = challengeAnswer,
-                                onValueChange = { challengeAnswer = it; challengeError = false },
-                                label = { Text("Your answer") },
-                                singleLine = true
+            item {
+                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Do Not Disturb", fontWeight = FontWeight.SemiBold)
+                        Text(
+                            if (!dndAccess) "Grant Notification Policy Access before enabling DND during focus."
+                            else if (dndEnabled) "Priority interruptions will be enabled during focus and restored afterwards."
+                            else "Optional. DND is currently off for focus sessions.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = onOpenDndSettings) { Text(if (dndAccess) "DND access settings" else "Grant DND access") }
+                            OutlinedButton(onClick = {
+                                if (dndAccess) {
+                                    dndEnabled = !dndEnabled
+                                    dndController.setEnabledForFocus(dndEnabled)
+                                } else onOpenDndSettings()
+                            }) { Text(if (dndEnabled) "Disable for focus" else "Enable for focus") }
+                        }
+                    }
+                }
+            }
+            item {
+                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(18.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Daily focus reminder", fontWeight = FontWeight.SemiBold)
+                        Text(if (scheduleEnabled) "Repeats daily at $scheduleTime (may be delayed by Android battery optimizations)." else "A gentle daily reminder. It never starts a session automatically.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = {
+                                TimePickerDialog(
+                                    context,
+                                    { _, hour, minute ->
+                                        scheduleStore.configure(true, hour, minute)
+                                        scheduleEnabled = true
+                                        scheduleTime = "%02d:%02d".format(hour, minute)
+                                    },
+                                    scheduleStore.hour(),
+                                    scheduleStore.minute(),
+                                    true
+                                ).show()
+                            }) { Text("Set time") }
+                            OutlinedButton(onClick = {
+                                scheduleEnabled = !scheduleEnabled
+                                scheduleStore.configure(scheduleEnabled)
+                            }) { Text(if (scheduleEnabled) "Turn off" else "Turn on") }
+                        }
+                    }
+                }
+            }
+            item {
+                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFFE7EFEA)), shape = RoundedCornerShape(18.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Achievements", fontWeight = FontWeight.SemiBold)
+                        achievements.forEach { achievement ->
+                            Text(
+                                (if (achievement.unlocked) "✓ " else "○ ") + achievement.title + " — " + achievement.description,
+                                color = if (achievement.unlocked) Color(0xFF176B55) else Color(0xFF758078),
+                                style = MaterialTheme.typography.bodySmall
                             )
-                            if (challengeError) Text("That answer isn't correct. Try again.", color = MaterialTheme.colorScheme.error)
-                            Text("If you close this challenge, your focus session continues.")
                         }
-                    },
-                    confirmButton = {
-                        Button(onClick = {
-                            val current = challenge ?: return@Button
-                            if (FocusChallenge.isCorrect(challengeAnswer, current)) {
-                                challenge = null
-                                onChallengePassed()
-                            } else challengeError = true
-                        }) { Text("Confirm and end") }
-                    },
-                    dismissButton = {
-                        OutlinedButton(onClick = { challenge = null }) { Text("Keep focusing") }
                     }
-                )
+                }
+            }
+            item {
+                Text("LOCAL-FIRST · NO ACCOUNT REQUIRED", color = Color(0xFF829088), fontSize = 10.sp, letterSpacing = 1.sp)
             }
         }
+    }
+
+    if (challenge != null) {
+        AlertDialog(
+            onDismissRequest = { challenge = null },
+            title = { Text("A quick pause before you leave") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Solve this to end the session early:")
+                    Text(challenge!!.prompt, style = MaterialTheme.typography.headlineMedium)
+                    OutlinedTextField(
+                        value = challengeAnswer,
+                        onValueChange = { challengeAnswer = it; challengeError = false },
+                        label = { Text("Your answer") },
+                        singleLine = true
+                    )
+                    if (challengeError) Text("That answer isn't correct. Try again.", color = MaterialTheme.colorScheme.error)
+                    Text("If you close this challenge, your focus session continues.")
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val current = challenge ?: return@Button
+                    if (FocusChallenge.isCorrect(challengeAnswer, current)) {
+                        challenge = null
+                        onChallengePassed()
+                    } else challengeError = true
+                }) { Text("Confirm and end") }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { challenge = null }) { Text("Keep focusing") }
+            }
+        )
+    }
+
+    if (customProfileDialog) {
+        AlertDialog(
+            onDismissRequest = { customProfileDialog = false },
+            title = { Text("Create a focus profile") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = customName, onValueChange = { customName = it }, label = { Text("Profile name") }, singleLine = true)
+                    OutlinedTextField(value = customDuration, onValueChange = { customDuration = it.filter(Char::isDigit).take(3) }, label = { Text("Duration in minutes (5–180)") }, singleLine = true)
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val duration = customDuration.toIntOrNull()
+                    if (customName.isNotBlank() && duration != null && duration in 5..180) {
+                        profiles.saveCustom(customName, duration)
+                        selectedProfile = profiles.selectedProfile()
+                        selectedMinutes = selectedProfile.durationMinutes
+                        customProfileDialog = false
+                    }
+                }) { Text("Save profile") }
+            },
+            dismissButton = { OutlinedButton(onClick = { customProfileDialog = false }) { Text("Cancel") } }
+        )
     }
 }
 
