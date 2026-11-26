@@ -10,16 +10,17 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
-import com.wenodh.zen.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class FocusSessionService : Service() {
-    private val scope = CoroutineScope(Dispatchers.Default)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var ticker: Job? = null
     private lateinit var store: FocusSessionStore
 
@@ -31,13 +32,15 @@ class FocusSessionService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
-            store.clear()
+            store.interrupt()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             return START_NOT_STICKY
         }
 
+        // A sticky restart or reboot can arrive after the persisted deadline.
         if (!store.isActive()) {
+            if (store.finishIfExpired()) showCompletionNotification()
             stopSelf()
             return START_NOT_STICKY
         }
@@ -57,23 +60,11 @@ class FocusSessionService : Service() {
         ticker?.cancel()
         ticker = scope.launch {
             while (isActive && store.isActive()) {
-                val remaining = store.remainingMillis()
-                val manager = getSystemService(NotificationManager::class.java)
-                manager.notify(NOTIFICATION_ID, buildNotification(remaining))
-                delay(15_000L)
+                getSystemService(NotificationManager::class.java)
+                    .notify(NOTIFICATION_ID, buildNotification(store.remainingMillis()))
+                delay(NOTIFICATION_REFRESH_MS)
             }
-            if (store.finishIfExpired()) {
-                getSystemService(NotificationManager::class.java).notify(
-                    NOTIFICATION_ID,
-                    NotificationCompat.Builder(this@FocusSessionService, CHANNEL_ID)
-                        .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-                        .setContentTitle("Focus session complete")
-                        .setContentText("Nice work. Your focus session is complete.")
-                        .setAutoCancel(true)
-                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                        .build()
-                )
-            }
+            if (store.finishIfExpired()) showCompletionNotification()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
@@ -93,6 +84,19 @@ class FocusSessionService : Service() {
             .build()
     }
 
+    private fun showCompletionNotification() {
+        getSystemService(NotificationManager::class.java).notify(
+            COMPLETION_NOTIFICATION_ID,
+            NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                .setContentTitle("Focus session complete")
+                .setContentText("Nice work. Your focus session is complete.")
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .build()
+        )
+    }
+
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(CHANNEL_ID, "Focus session", NotificationManager.IMPORTANCE_LOW)
@@ -102,6 +106,7 @@ class FocusSessionService : Service() {
 
     override fun onDestroy() {
         ticker?.cancel()
+        scope.cancel()
         super.onDestroy()
     }
 
@@ -110,6 +115,8 @@ class FocusSessionService : Service() {
     companion object {
         private const val CHANNEL_ID = "focus_session"
         private const val NOTIFICATION_ID = 4101
+        private const val COMPLETION_NOTIFICATION_ID = 4102
+        private const val NOTIFICATION_REFRESH_MS = 15_000L
         const val ACTION_STOP = "com.wenodh.zen.action.STOP_FOCUS"
 
         fun start(context: Context) {
