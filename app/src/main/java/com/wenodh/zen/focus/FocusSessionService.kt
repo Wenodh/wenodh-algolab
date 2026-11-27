@@ -66,10 +66,12 @@ class FocusSessionService : Service() {
             return START_NOT_STICKY
         }
 
-        updateForegroundTypes(includeMediaPlayback = AmbientSoundStore(this).selected() != null)
+        val skipAmbientOnRestart = intent?.getBooleanExtra(EXTRA_SKIP_AMBIENT, false) == true
+        val selectedAmbient = AmbientSoundStore(this).selected()
+        updateForegroundTypes(includeMediaPlayback = !skipAmbientOnRestart && selectedAmbient != null)
 
         FocusDndController(this).applyForSession()
-        AmbientSoundStore(this).selected()?.let(AmbientSoundEngine::start)
+        if (!skipAmbientOnRestart) selectedAmbient?.let(AmbientSoundEngine::start)
         ticker?.cancel()
         ticker = scope.launch {
             while (isActive && store.isActive()) {
@@ -154,9 +156,11 @@ class FocusSessionService : Service() {
         const val ACTION_STOP = "com.wenodh.zen.action.STOP_FOCUS"
         const val ACTION_AMBIENT_START = "com.wenodh.zen.action.AMBIENT_START"
         const val ACTION_AMBIENT_STOP = "com.wenodh.zen.action.AMBIENT_STOP"
+        private const val EXTRA_SKIP_AMBIENT = "skip_ambient_on_restart"
 
-        fun start(context: Context) {
+        fun start(context: Context, skipAmbient: Boolean = false) {
             val intent = Intent(context, FocusSessionService::class.java)
+                .putExtra(EXTRA_SKIP_AMBIENT, skipAmbient)
             androidx.core.content.ContextCompat.startForegroundService(context, intent)
         }
 
