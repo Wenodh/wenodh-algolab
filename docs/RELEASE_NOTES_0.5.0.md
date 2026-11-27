@@ -1,10 +1,11 @@
-# Wenodh Zen 0.5.1
+# Wenodh Zen 0.5.2
 
 ## Added
 
 - Safer reboot recovery: the focus timer can resume without attempting to restart ambient media playback from the boot receiver.
 - Protect the device's resolved Settings app from being selected for app blocking.
 - Ambient audio uses sustained audio focus and recovers from AudioTrack writer errors without crashing the process.
+- Add a deliberate two-step emergency exit that bypasses the challenge but records the session as interrupted.
 
 - Work, Study, Reading, Wind down and custom focus profiles.
 - Math, memory and reflection challenges for intentional early session exit.
