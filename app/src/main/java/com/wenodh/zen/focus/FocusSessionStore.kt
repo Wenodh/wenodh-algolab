@@ -37,7 +37,7 @@ class FocusSessionStore(context: Context) {
 
     @Synchronized
     fun endWithChallenge(): Boolean {
-        if (!hasPendingSession()) return false
+        if (!hasPendingSession() || finishIfExpired()) return false
         history.finishSession(
             prefs.getString(KEY_SESSION_ID, "").orEmpty(),
             SessionTimeline.STATUS_CHALLENGE_EXIT,
@@ -65,7 +65,7 @@ class FocusSessionStore(context: Context) {
 
     @Synchronized
     fun interrupt(): Boolean {
-        if (!hasPendingSession()) return false
+        if (!hasPendingSession() || finishIfExpired()) return false
         history.finishSession(
             prefs.getString(KEY_SESSION_ID, "").orEmpty(),
             SessionTimeline.STATUS_INTERRUPTED,
