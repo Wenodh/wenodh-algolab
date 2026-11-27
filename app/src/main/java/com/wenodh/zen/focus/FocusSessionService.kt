@@ -66,7 +66,7 @@ class FocusSessionService : Service() {
             return START_NOT_STICKY
         }
 
-        val skipAmbientOnRestart = intent?.getBooleanExtra(EXTRA_SKIP_AMBIENT, false) == true
+        val skipAmbientOnRestart = intent?.getBooleanExtra(EXTRA_SKIP_AMBIENT, false) ?: true
         val selectedAmbient = AmbientSoundStore(this).selected()
         updateForegroundTypes(includeMediaPlayback = !skipAmbientOnRestart && selectedAmbient != null)
 
