@@ -21,6 +21,7 @@ object ProtectedPackages {
         if (!defaultDialer.isNullOrBlank()) add(defaultDialer)
 
         resolvePackage(packageManager, Intent(Intent.ACTION_DIAL))?.let { add(it) }
+        resolvePackage(packageManager, Intent(android.provider.Settings.ACTION_SETTINGS))?.let { add(it) }
         resolvePackage(packageManager, Intent("android.intent.action.EMERGENCY_DIAL"))?.let { add(it) }
         resolvePackage(
             packageManager,
