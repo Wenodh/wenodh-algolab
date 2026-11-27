@@ -193,6 +193,7 @@ private fun ZenHome(
     var revealMemory by remember { mutableStateOf(false) }
     var challengeAnswer by remember { mutableStateOf("") }
     var challengeError by remember { mutableStateOf(false) }
+    var showEmergencyExitConfirmation by remember { mutableStateOf(false) }
     var customProfileDialog by remember { mutableStateOf(false) }
     var customName by remember { mutableStateOf("My focus") }
     var customDuration by remember { mutableStateOf("30") }
@@ -502,7 +503,31 @@ private fun ZenHome(
                 }) { Text("Confirm and end") }
             },
             dismissButton = {
-                OutlinedButton(onClick = { challenge = null }) { Text("Keep focusing") }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { challenge = null }) { Text("Keep focusing") }
+                    TextButton(onClick = { showEmergencyExitConfirmation = true }) { Text("Emergency exit") }
+                }
+            }
+        )
+    }
+
+    if (showEmergencyExitConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showEmergencyExitConfirmation = false },
+            title = { Text("End this session now?") },
+            text = {
+                Text("This bypasses the exit challenge and records the session as interrupted. Use it if you need to stop immediately.")
+            },
+            confirmButton = {
+                Button(onClick = {
+                    store.interrupt()
+                    FocusSessionService.stop(context)
+                    challenge = null
+                    showEmergencyExitConfirmation = false
+                }) { Text("End session") }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showEmergencyExitConfirmation = false }) { Text("Go back") }
             }
         )
     }
