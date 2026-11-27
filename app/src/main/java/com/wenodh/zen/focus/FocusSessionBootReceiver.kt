@@ -13,7 +13,7 @@ class FocusSessionBootReceiver : BroadcastReceiver() {
         if (!store.hasPendingSession()) return
 
         // The deadline remains persisted if Android/OEM policy rejects restart.
-        runCatching { FocusSessionService.start(context) }
+        runCatching { FocusSessionService.start(context, skipAmbient = true) }
             .onFailure { Log.w(TAG, "Could not resume focus service after reboot", it) }
     }
 
