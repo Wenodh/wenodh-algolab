@@ -17,6 +17,7 @@ import kotlin.random.Random
 object AmbientSoundEngine {
     enum class Sound { WHITE, PINK, BROWN }
 
+    private const val TAG = "ZenAmbientSound"
     private const val SAMPLE_RATE = 22_050
     private val running = AtomicBoolean(false)
     @Volatile private var track: AudioTrack? = null
