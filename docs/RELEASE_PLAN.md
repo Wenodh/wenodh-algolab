@@ -63,6 +63,8 @@
 
 ## Milestone 6 — Release hardening
 
+Latest hardening pass (0.5.1): reboot recovery skips ambient playback promotion, Settings is protected from accidental blocking, and AudioTrack writer failures are caught and cleaned up. CI must pass again on the final commit.
+
 - [ ] Review all changed Kotlin and Gradle files; remove dead code and resolve warnings.
 - [ ] Run unit tests and assemble debug APK successfully on the final commit.
 - [ ] Verify install, launch, session timer, process death and reboot recovery.
