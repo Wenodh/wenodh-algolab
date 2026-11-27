@@ -5,6 +5,9 @@ import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.AudioFormat
 import android.media.AudioTrack
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.random.Random
 
@@ -34,7 +37,7 @@ object AmbientSoundEngine {
             .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
             .build()
         val manager = appAudioManager ?: return
-        val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+        val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
             .setAudioAttributes(attributes)
             .setOnAudioFocusChangeListener { change ->
                 if (change == AudioManager.AUDIOFOCUS_LOSS || change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) stop()
@@ -64,25 +67,33 @@ object AmbientSoundEngine {
             var pinkB0 = 0.0
             var pinkB1 = 0.0
             var pinkB2 = 0.0
-            while (running.get()) {
-                for (i in samples.indices) {
-                    val white = Random.nextDouble(-1.0, 1.0)
-                    val value = when (sound) {
-                        Sound.WHITE -> white * 0.12
-                        Sound.BROWN -> {
-                            brown = ((brown + 0.02 * white) / 1.02).coerceIn(-1.0, 1.0)
-                            brown * 2.8
+            try {
+                while (running.get()) {
+                    for (i in samples.indices) {
+                        val white = Random.nextDouble(-1.0, 1.0)
+                        val value = when (sound) {
+                            Sound.WHITE -> white * 0.12
+                            Sound.BROWN -> {
+                                brown = ((brown + 0.02 * white) / 1.02).coerceIn(-1.0, 1.0)
+                                brown * 2.8
+                            }
+                            Sound.PINK -> {
+                                pinkB0 = 0.99765 * pinkB0 + white * 0.0990460
+                                pinkB1 = 0.96300 * pinkB1 + white * 0.2965164
+                                pinkB2 = 0.57000 * pinkB2 + white * 1.0526913
+                                (pinkB0 + pinkB1 + pinkB2 + white * 0.1848) * 0.035
+                            }
                         }
-                        Sound.PINK -> {
-                            pinkB0 = 0.99765 * pinkB0 + white * 0.0990460
-                            pinkB1 = 0.96300 * pinkB1 + white * 0.2965164
-                            pinkB2 = 0.57000 * pinkB2 + white * 1.0526913
-                            (pinkB0 + pinkB1 + pinkB2 + white * 0.1848) * 0.035
-                        }
+                        samples[i] = (value.coerceIn(-1.0, 1.0) * Short.MAX_VALUE).toInt().toShort()
                     }
-                    samples[i] = (value.coerceIn(-1.0, 1.0) * Short.MAX_VALUE).toInt().toShort()
+                    if (running.get() && audioTrack.write(samples, 0, samples.size) < 0) {
+                        error("AudioTrack rejected ambient audio buffer.")
+                    }
                 }
-                if (running.get()) audioTrack.write(samples, 0, samples.size)
+            } catch (error: Exception) {
+                Log.w(TAG, "Ambient audio writer stopped unexpectedly", error)
+                running.set(false)
+                Handler(Looper.getMainLooper()).post { stop() }
             }
         }, "WenodhZenAmbient").apply { isDaemon = true; start() }
     }
